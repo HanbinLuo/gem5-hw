@@ -79,7 +79,7 @@ class Root : public SimObject
 
     void timeSync();
     EventFunctionWrapper syncEvent;
-
+ 
   public:
     /**
      * Use this function to get a pointer to the single Root object in the

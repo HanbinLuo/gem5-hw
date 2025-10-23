@@ -1,0 +1,6 @@
+Import('*')
+
+SimObject('random_number_gen.py',
+          sim_objects=['random_number_gen'])
+Source('random_number_gen.cc')
+# DebugFlag('random_number_genDebug')
