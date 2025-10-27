@@ -3,7 +3,9 @@
 
 #include "sim/sim_object.hh"
 #include "params/random_number_gen.hh"
+#include <queue>
 // #include "sim/clocked_object.hh"
+#include "venus/venuspacket.hh" // 包含 packet_gen 类头文件
 #include <random>
 
 namespace gem5 {
@@ -19,6 +21,8 @@ class random_number_gen : public SimObject
     EventFunctionWrapper nextTickEvent;
     int cycle_count;
 
+    // FIFO 队列，用来存储 venuspacket 对象
+    std::queue<venuspacket> packetFifo;
     // 随机生成数字的函数
     int generateRandomNumber();
     int randomCycleTime();

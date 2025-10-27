@@ -1,13 +1,18 @@
 #include "base/trace.hh"
 #include "venus/random_number_gen.hh"
 
+
+
 // #include "debug/random_number_gen.hh"
 #include <iostream>
 namespace gem5
 {
+
+const int FIFO_DEPTH = 5;  // 你可以根据需要调整队列深度
 random_number_gen::random_number_gen(const random_number_genParams &params) : SimObject(params), 
 nextTickEvent([this]{generateNumber();},name()),
-cycle_count(0) {
+cycle_count(0),
+packetFifo() {
     std::cout << "this is a test random number generate sequential function to simulate packet gen!\n" << std::endl;
     // DPRINTF(RandomNumberGenerator,"overwrite generatenumber by packetgen in venus\n");
 }
@@ -23,7 +28,16 @@ void random_number_gen::generateNumber() {
         int randomNumber = generateRandomNumber();
         std::cout << "Cycle: " << cycle_count << ", Random Number: " << randomNumber << std::endl;
 
+        if (packetFifo.size() < FIFO_DEPTH) {  // FIFO 未满
+            venuspacket m_venuspacket;  // 在此实例化一个新的 packet_gen
+            m_venuspacket.randomize();  // 生成并打印包的信息
+            m_venuspacket.display();
+            packetFifo.push(m_venuspacket);  // 将新的包推入 FIFO
 
+            std::cout << "Packet added to FIFO. FIFO size: " << packetFifo.size() << std::endl;
+        } else {
+            std::cout << "FIFO is full. No packet generated this cycle.\n";
+        }
         // 重新调度下一个事件
         schedule(nextTickEvent, curTick() + increase);
     }
