@@ -38,8 +38,8 @@ bool VenusSequencer::handleRequest(VenusInstrPkt* pkt)
     }
     isBusy = true;
     //pkt->display();
-    venus_instr_pkt = new VenusInstrPkt(pkt);
-    schedule(nextTickEvent,curTick()+1);
+    this->venus_instr_pkt = new VenusInstrPkt(pkt);
+    schedule(nextTickEvent,curTick()+20);
     return true;
 }
 
@@ -48,9 +48,9 @@ void VenusSequencer::executeSequence()
     if(isBusy == true)
     {
         std::cout << "at tick = " << curTick() << ", VenusSequencer has received an vns instr successfully. The content is:" << std::endl;
-        venus_instr_pkt->display();
+        this->venus_instr_pkt->display();
+        delete this->venus_instr_pkt;
         isBusy = false;
-        panic("VenusSequencer exec successful!");
     }
 }
 }

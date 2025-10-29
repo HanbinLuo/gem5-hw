@@ -40,16 +40,18 @@ class VenusPacketGen : public SimObject{
         Port &getPort(const std::string &if_name, PortID idx=InvalidPortID) override;
 
     private:
-        // 内部私有变量
+        // 关键仿真组件
         VenusPacketGenSequencerSidePort port_venuspacketgen_sendto_venussequencer;
-        unsigned int schedule_interval = 100;
         EventFunctionWrapper nextTickEvent;
+        // 内部私有参数
+        unsigned int schedule_interval = 15;
+        // 内部私有状态
+        // 内部私有变量
+        VenusInstrPkt* venus_instr_pkt;
 
     public:
-        // 成员变量
-        VenusInstrPkt venus_instr_pkt;
-
         // 构造函数
+        void startup() override;
         VenusPacketGen(const VenusPacketGenParams &params) : SimObject(params),
             port_venuspacketgen_sendto_venussequencer(params.name + ".port_venuspacketgen_sendto_venussequencer", this),
             nextTickEvent([this]{sendOneVenusPkt();},name()) 
@@ -57,12 +59,7 @@ class VenusPacketGen : public SimObject{
 
         // 发送函数
         void sendOneVenusPkt();
-        void startup() override;
 
-    private:
-        // 私有成员函数，计算vlength
-        // int vlength_cal(int vew, int vl);
-        // int Nrlines = 1024;
 };
 }
 #endif // VENUS_PACKET_H
