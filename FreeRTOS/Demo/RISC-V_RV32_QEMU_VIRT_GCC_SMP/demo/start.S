@@ -2,9 +2,8 @@
  * Minimal machine-mode start-up for the FreeRTOS QEMU RV32 virt demo.
  */
 
-    .section .init
+    .section .init, "ax", @progbits
     .globl _start
-    .globl __bss_init_flag
 
 .equ STACK_SIZE_PER_HART, 0x4000
 
@@ -71,5 +70,10 @@ _start:
 4:
     tail main
 
+    /* ========= 单独定义 __bss_init_flag 为 BSS/SBSS 变量 ========= */
+
+    .section .sbss, "aw", @nobits
+    .globl __bss_init_flag
+    .p2align 2           /* 2^2 = 4 字节对齐 */
 __bss_init_flag:
-    .word 0
+    .zero 4              /* BSS 段用 .zero，而不是 .word  */

@@ -64,9 +64,9 @@ mkdir -p demo/build
 cmake -S demo -B demo/build -G Ninja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DFREERTOS_KERNEL_PATH=/home/fengyuan/FreeRTOSv202411.00/FreeRTOS/Source \
-    -DCMAKE_C_COMPILER=riscv32-unknown-elf-gcc \
-    -DCMAKE_ASM_COMPILER=riscv32-unknown-elf-gcc \
-    -DCMAKE_OBJCOPY=riscv32-unknown-elf-objcopy
+    -DCMAKE_C_COMPILER=riscv64-unknown-elf-gcc \
+    -DCMAKE_ASM_COMPILER=riscv64-unknown-elf-gcc \
+    -DCMAKE_OBJCOPY=riscv64-unknown-elf-objcopy
 cmake --build demo/build
 ```
 
