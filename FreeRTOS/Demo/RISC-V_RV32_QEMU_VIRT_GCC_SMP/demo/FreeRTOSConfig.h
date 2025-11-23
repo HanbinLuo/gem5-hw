@@ -28,7 +28,7 @@
 #define configTOTAL_HEAP_SIZE                   ( ( size_t ) ( 64U * 1024U ) )
 #define configUSE_APPLICATION_TASK_TAG          0
 #define configUSE_CORE_AFFINITY                 1
-#define configNUMBER_OF_CORES                   2
+#define configNUMBER_OF_CORES                   4
 #define configTICK_CORE                         0
 #define configRUN_MULTIPLE_PRIORITIES           1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 0

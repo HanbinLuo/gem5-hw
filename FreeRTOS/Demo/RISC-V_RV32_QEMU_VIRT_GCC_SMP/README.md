@@ -78,8 +78,7 @@ The resulting ELF image is `demo/build/freertos_virt_demo` and a raw binary is e
 Launch the demo on two harts in machine mode (no firmware) with:
 
 ```
-qemu-system-riscv32 -machine virt -m 32M -smp 2 -nographic -bios none \
-    -kernel demo/build/freertos_virt_demo
+qemu-system-riscv32 -machine virt -m 32M -smp 2 -nographic -bios none -kernel demo/build/freertos_virt_demo
 ```
 
 Typical output:

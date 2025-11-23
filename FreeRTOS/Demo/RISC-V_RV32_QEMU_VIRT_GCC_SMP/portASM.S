@@ -149,7 +149,7 @@ vec_msip:
     jr t0
 
 vec_mtimer:
-    la t0, freertos_risc_v_trap_handler
+    la t0, freertos_risc_v_mtimer_interrupt_handler
     jr t0
 
 vec_default:
@@ -488,8 +488,19 @@ handle_interrupt:
         portdbg_putc 84                  /* 'T' */
 
         portUPDATE_MTIMER_COMPARE_REGISTER
+
+        /* Enter ISR critical section so prvYieldForTask sees a non-zero
+           nesting count (SMP requires the task lock to be held here). */
+        call callTaskEnterCriticalFromISR
+        mv   t2, a0                    /* Preserve saved interrupt state. */
+
         call xTaskIncrementTick
-        beqz a0, processed_source       /* Don't switch context if incrementing tick didn't unblock a task. */
+        mv   t1, a0                    /* Remember if a yield is required. */
+
+        mv   a0, t2
+        call callTaskExitCriticalFromISR
+
+        beqz t1, processed_source      /* Don't switch context if no task unblocked. */
 #if configNUMBER_OF_CORES != 1
         portcontextGET_CORE_ID a0
 #endif

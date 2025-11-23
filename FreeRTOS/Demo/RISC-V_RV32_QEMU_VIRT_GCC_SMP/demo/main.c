@@ -12,6 +12,8 @@ extern void vPortSetupTimerInterrupt(void);
 
 extern size_t strlen(const char* pcString);
 
+extern void vStartDagDemo(void);
+
 #define UART0_BASE 0x10000000UL
 #define UART_REG_DLL 0x00
 #define UART_REG_DLM 0x01
@@ -73,6 +75,11 @@ int main(void) {
 
   if (uxHart == (UBaseType_t)configTICK_CORE) {
     prvPrimaryCoreInit();
+
+    // TickType_t xNext = xTaskGetTickCount();
+    // xNext += pdMS_TO_TICKS(1U);
+    // vTaskDelayUntil(&xNext, pdMS_TO_TICKS(1U));
+
     vTaskStartScheduler();
     /* Should never reach here. If we do, log for diagnostics. */
     vDemoLogString("scheduler_returned\n");
@@ -109,77 +116,111 @@ static void prvPrimaryCoreInit(void) {
 #endif
   vDemoLogString("FreeRTOS SMP demo (QEMU RV32 virt)\n");
 
-  /* 创建通信通道 */
-  xChan = xQueueCreate(16, sizeof(uint32_t));
-  if (xChan == NULL) {
-    vDemoLogDecimal("queue_create_failed", 0U);
-  }
+  // /* 创建通信通道 */
+  // xChan = xQueueCreate(16, sizeof(uint32_t));
+  // if (xChan == NULL) {
+  //   vDemoLogDecimal("queue_create_failed", 0U);
+  // }
 
   if (xTaskCreate(prvHeartbeatTask, "pulse", configMINIMAL_STACK_SIZE + 128U,
                   NULL, tskIDLE_PRIORITY + 3U, &xHeartbeatHandle) != pdPASS) {
     vDemoLogDecimal("heartbeat_create_failed", 0U);
   }
 
-  /* 创建 worker 任务以演示 SMP；软 tick/Idle 切换将推动两核调度。 */
-  if (xTaskCreate(prvWorkerTask, "worker", configMINIMAL_STACK_SIZE + 256U,
-                  NULL, tskIDLE_PRIORITY + 1U, &xWorkerHandle) != pdPASS) {
-    vDemoLogDecimal("worker_create_failed", 0U);
-  } else {
-    /* 放开亲和性：允许在所有可用核上运行，适配 -bios none 下只有 hart0
-     * 实际运行的情况。 */
-    UBaseType_t uxMask =
-        ((UBaseType_t)1U << (UBaseType_t)configNUMBER_OF_CORES) -
-        (UBaseType_t)1U;
-    vTaskCoreAffinitySet(xWorkerHandle, uxMask);
-    if (xHeartbeatHandle != NULL) {
-      vTaskCoreAffinitySet(xHeartbeatHandle, uxMask);
-    }
-  }
+  // /* 创建 worker 任务以演示 SMP；软 tick/Idle 切换将推动两核调度。 */
+  // if (xTaskCreate(prvWorkerTask, "worker", configMINIMAL_STACK_SIZE + 256U,
+  //                 NULL, tskIDLE_PRIORITY + 1U, &xWorkerHandle) != pdPASS) {
+  //   vDemoLogDecimal("worker_create_failed", 0U);
+  // } else {
+  //   /* 放开亲和性：允许在所有可用核上运行，适配 -bios none 下只有 hart0
+  //    * 实际运行的情况。 */
+  //   UBaseType_t uxMask =
+  //       ((UBaseType_t)1U << (UBaseType_t)configNUMBER_OF_CORES) -
+  //       (UBaseType_t)1U;
+  //   vTaskCoreAffinitySet(xWorkerHandle, uxMask);
+  //   if (xHeartbeatHandle != NULL) {
+  //     vTaskCoreAffinitySet(xHeartbeatHandle, uxMask);
+  //   }
+  // }
+
+  /* 在这里启动 DAG 运行时：初始化 DAG + 创建 DAG worker 任务 */
+  vStartDagDemo();
 
   /* 固定亲和性：心跳跑在核0，worker 跑在核1，便于观察 SMP 行为。 */
   if (xHeartbeatHandle != NULL) {
     vTaskCoreAffinitySet(xHeartbeatHandle, (1U << 0));
   }
-  if (xWorkerHandle != NULL) {
-    vTaskCoreAffinitySet(xWorkerHandle, (1U << 1));
-  }
+  // if (xWorkerHandle != NULL) {
+  //   vTaskCoreAffinitySet(xWorkerHandle, (1U << 1));
+  // }
 }
 
 /*-----------------------------------------------------------*/
 
+// static void prvHeartbeatTask(void* pvParameters) {
+//   (void)pvParameters;
+
+//   // uint32_t ulPulse = 0U;
+//   static int sReleasedSecondaries = 0;
+//   // TickType_t xNext = xTaskGetTickCount();
+//   // const TickType_t xPeriod = pdMS_TO_TICKS(1000U);
+//   const TickType_t xDelay = 1000 / portTICK_PERIOD_MS;
+//   int cnt = 0;
+//   for (;;) {
+//     // vDemoLogDecimal("h", ulPulse++);
+
+//     if (sReleasedSecondaries == 0) {
+//       vDemoLogString("[heartbeat] releasing secondaries\n");
+//       prvWakeSecondaryHarts();
+//       __atomic_store_n(&ulSecondaryRelease, 1U, __ATOMIC_RELEASE);
+//       __asm volatile("fence w, rw" ::: "memory");
+//       sReleasedSecondaries = 1;
+//       vDemoLogString("[heartbeat] secondaries released\n");
+//     }
+
+//     vDemoLogDecimal("beat:", cnt++);
+//     // vDemoLogString("[heartbeat] send\n");
+//     // /* 每 1000ms 往 worker（核1）发送一个“递增序号” */
+//     // if (xWorkerHandle != NULL) {
+//     //   // xTaskNotifyGive(xWorkerHandle);
+//     //   /* eSetValueWithOverwrite：若上次没来得及取，覆盖旧值，保持最新 */
+
+//     //   /* 发送到通道 */
+//     //   if (xChan != NULL) {
+//     //     /* 发送给 worker 的序号 */
+//     //     static uint32_t ulTxSeq = 0U;
+//     //     (void)xQueueSend(xChan, &ulTxSeq, portMAX_DELAY);
+//     //     ulTxSeq++;
+//     //   }
+//     // }
+
+//     // vTaskDelayUntil(&xNext, xPeriod);
+//     vTaskDelay(xDelay);
+//   }
+// }
+
 static void prvHeartbeatTask(void* pvParameters) {
   (void)pvParameters;
 
-  // uint32_t ulPulse = 0U;
-  static int sReleasedSecondaries = 0;
-  TickType_t xNext = xTaskGetTickCount();
+  /* 只跑一次：唤醒所有 secondary 核 */
+  vDemoLogString("[heartbeat] releasing secondaries\n");
 
+  prvWakeSecondaryHarts();
+  __atomic_store_n(&ulSecondaryRelease, 1U, __ATOMIC_RELEASE);
+  __asm volatile("fence w, rw" ::: "memory");
+
+  vDemoLogString("[heartbeat] secondaries released\n");
+
+  /* 做一点点防御性延时，保证日志打出去（可选） */
+  // vTaskDelay(pdMS_TO_TICKS(1));
+
+  vDemoLogString("[heartbeat] exit\n");
+
+  /* 自杀，释放 core0 调度给真正的业务任务 */
+  vTaskDelete(NULL);
+
+  /* 永远不会走到这里 */
   for (;;) {
-    // vDemoLogDecimal("h", ulPulse++);
-
-    if (sReleasedSecondaries == 0) {
-      prvWakeSecondaryHarts();
-      __atomic_store_n(&ulSecondaryRelease, 1U, __ATOMIC_RELEASE);
-      __asm volatile("fence w, rw" ::: "memory");
-      sReleasedSecondaries = 1;
-    }
-
-    /* 每 1000ms 往 worker（核1）发送一个“递增序号” */
-    if (xWorkerHandle != NULL) {
-      // xTaskNotifyGive(xWorkerHandle);
-      /* eSetValueWithOverwrite：若上次没来得及取，覆盖旧值，保持最新 */
-
-      /* 发送到通道 */
-      if (xChan != NULL) {
-        /* 发送给 worker 的序号 */
-        static uint32_t ulTxSeq = 0U;
-        (void)xQueueSend(xChan, &ulTxSeq, portMAX_DELAY);
-        ulTxSeq++;
-      }
-    }
-
-    xNext += pdMS_TO_TICKS(1000U);
-    vTaskDelayUntil(&xNext, pdMS_TO_TICKS(1000U));
   }
 }
 
@@ -372,6 +413,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName) {
 
 void vAssertCalled(const char* pcFile, int lLine) {
   (void)pcFile;
+  vDemoLogString(pcFile);
   vDemoLogDecimal("assert", (uint32_t)lLine);
   taskDISABLE_INTERRUPTS();
   for (;;) {

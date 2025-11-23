@@ -44,6 +44,7 @@ add_subdirectory(.. FreeRTOS-Kernel-Port)
 add_executable(freertos_virt_demo
     start.S
     main.c
+    freertos_dag_example.c
     utils.c
 )
 
