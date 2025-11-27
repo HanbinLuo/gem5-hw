@@ -192,7 +192,7 @@ or start discussions. To join the mailing list please visit
 We hope you enjoy using gem5. When appropriate we advise sharing your
 contributions to the project. <https://www.gem5.org/contributing> can help you
 get started. Additional information can be found in the CONTRIBUTING.md file.
->>>>>>> c36264e (Initial commit)
+
 清理
 scons -c build/RISCV/gem5.opt
 编译
