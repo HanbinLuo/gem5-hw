@@ -30,10 +30,12 @@ Import('*')
 
 SimObject('Device.py', sim_objects=[
     'PioDevice', 'BasicPioDevice', 'DmaDevice', 'DmaVirtDevice', 'IsaFake'])
+SimObject('MyCompute.py', sim_objects=['MyCompute'])
 Source('io_device.cc')
 Source('isa_fake.cc')
 Source('dma_device.cc')
 Source('dma_virt_device.cc')
+Source('my_compute.cc')
 
 SimObject('IntPin.py', sim_objects=[])
 SimObject('ResetPort.py', sim_objects=[])
@@ -56,3 +58,5 @@ DebugFlag('Intel8254Timer')
 DebugFlag('MC146818')
 
 GTest('reg_bank.test', 'reg_bank.test.cc', with_tag('gem5 trace'))
+
+# EOF
