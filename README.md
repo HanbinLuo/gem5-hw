@@ -192,19 +192,19 @@ or start discussions. To join the mailing list please visit
 We hope you enjoy using gem5. When appropriate we advise sharing your
 contributions to the project. <https://www.gem5.org/contributing> can help you
 get started. Additional information can be found in the CONTRIBUTING.md file.
-
-清理
+# 如何使用
+## 清理
 scons -c build/RISCV/gem5.opt
-编译
+## 编译
 scons -j$(nproc) build/RISCV/gem5.opt
 
-编译计算单元测试elf
+## 编译计算单元测试elf
 cd tests/test-progs/riscv32/riscv32_compute_test
 make all
 
-gem5直接运行
+## gem5直接运行
 build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test.py --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test/build/CU_test_demo.elf
-调试--debug-flags=All
+## 调试--debug-flags=All
 build/RISCV/gem5.opt --debug-flags=All configs/tutorial/part1/fs_linux_cu_test.py --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test/build/CU_test_demo.elf > gem5_cu_test_log_all.txt
-另开一个终端
+## 另开一个终端
 m5term localhost 3456
