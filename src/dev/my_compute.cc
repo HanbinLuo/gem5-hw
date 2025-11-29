@@ -189,6 +189,8 @@ MyCompute::completeOperation()
     std::cout << "Address: 0x" << std::hex << pioAddr << std::dec
               << ", Range: " << pioSize
               << ", Delay: " << pioDelay << std::endl;
+    //CPU 时钟周期是 500 ticks，除以 500 得到周期数
+    std::cout << "Delay cycles: " << (pioDelay / 500) << std::endl;
 }
 
 
