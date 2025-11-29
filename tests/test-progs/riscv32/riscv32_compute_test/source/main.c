@@ -33,9 +33,9 @@ int main( void )
 {
 	plt_virt_init();
 
-    printf("RISC-V FreeRTOS Compute Unit Test\n");
-	uint8_t a = 10, b = 3;
-    uint8_t cfg = 0; // 0 = add, 1 = sub
+    printf("自定义计算单元测试\n");
+        uint8_t a = 10, b = 3;
+    uint8_t cfg = 1; // 0 = add, 1 = sub
 
     // 清除 done（可选）
     mmio_write8(CU_STATUS, 0);
@@ -48,21 +48,19 @@ int main( void )
     unsigned long long t0 = rdcycle64();
     mmio_write8(CU_CONFIG, cfg);
 
+    printf("waiting for computation to complete\n");
     // 轮询 status bit0 == 1
     while ((mmio_read8(CU_STATUS) & 0x1) == 0) {
-        // 可以做空循环或稍微延迟
+         //printf(".");
     }
+    //printf("/n");
     unsigned long long t1 = rdcycle64();
 
     uint8_t res = mmio_read8(CU_RESULT);
     unsigned long long cycles = t1 - t0;
 
-	// printf("RISC-V FreeRTOS Compute Unit Test\n");
-	// printf("开始访问自定义计算单元设备...\n");
-	// printf("计算单元设备访问成功！\n");
-
-	printf("%d+%d= %u\n", a,b,res);
-	printf("Compute cycles: %llu\n", cycles);
+        printf("%d - %d= %u\n", a,b,res);
+        printf("Compute cycles: %d \n", (int)cycles);
 
 	return 0;
 }
