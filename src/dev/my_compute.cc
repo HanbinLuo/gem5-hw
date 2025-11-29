@@ -186,7 +186,7 @@ MyCompute::completeOperation()
     std::cout << "MyCompute: Compute complete: " << unsigned(op_a)
               << ( (config & 0x1) ? " - " : " + " ) << unsigned(op_b)
               << " = " << unsigned(result) << "\n";
-    std::cout << "Address: " << pioAddr
+    std::cout << "Address: 0x" << std::hex << pioAddr << std::dec
               << ", Range: " << pioSize
               << ", Delay: " << pioDelay << std::endl;
 }
