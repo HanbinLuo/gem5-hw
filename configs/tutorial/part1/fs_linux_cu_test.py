@@ -246,7 +246,7 @@ if args.virtio_rng:
 system.my_compute = MyCompute(
     pio_addr=0x10009000,  # 选择地址，须与 guest 驱动/DTB 一致
     pio_size=0x8,  # data(0) + status(4) -> 8 bytes 区域
-    pio_latency="10ms",  # 可选，设备响应延迟
+    pio_latency="1ms",  # 可选，设备响应延迟
 )
 
 # system.my_compute.pio = system.iobus.mem_side_ports
