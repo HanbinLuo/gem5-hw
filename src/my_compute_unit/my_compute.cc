@@ -1,4 +1,4 @@
-#include "dev/my_compute.hh"
+#include "my_compute_unit/my_compute.hh"
 
 #include <cstring>
 #include <iostream>
@@ -137,7 +137,8 @@ MyCompute::write(PacketPtr pkt)
         case 1: op_b = v; break;
         case 2:
             config = v;
-            // trigger computation on config write: clear done, schedule compute
+            // trigger computation on config write:
+            //  clear done, schedule compute
             status &= ~0x1; // clear done bit
             schedule(&computeEvent, curTick() + pioDelay);
             break;

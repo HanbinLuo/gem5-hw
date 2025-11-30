@@ -20,7 +20,12 @@ inline union MyCompute
     ~MyCompute() {}
     SimpleFlag flagMyCompute;
 
-    MyCompute() : flagMyCompute("MyCompute", "MyCompute device debug", false) {}
+    MyCompute()
+    : flagMyCompute(
+        "MyCompute",
+        "MyCompute device debug",
+        false)
+{}
 } instanceMyCompute;
 
 } // namespace unions

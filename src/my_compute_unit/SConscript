@@ -1,0 +1,4 @@
+Import('*')
+
+SimObject('MyCompute.py', sim_objects=['MyCompute'])
+Source('my_compute.cc')

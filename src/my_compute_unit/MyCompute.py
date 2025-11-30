@@ -4,7 +4,7 @@ from m5.params import *
 
 class MyCompute(BasicPioDevice):
     type = "MyCompute"
-    cxx_header = "dev/my_compute.hh"
+    cxx_header = "my_compute_unit/my_compute.hh"
     cxx_class = "gem5::MyCompute"
 
     # Parameters: base address and size. pio_latency provided by BasicPioDevice
