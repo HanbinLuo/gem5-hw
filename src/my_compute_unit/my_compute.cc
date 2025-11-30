@@ -5,9 +5,9 @@
 
 #include "base/logging.hh"
 #include "base/trace.hh"
-#include "debug/MyCompute.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
+#include "my_compute_unit/debug/MyCompute.hh"
 
 namespace gem5 {
 
