@@ -241,7 +241,19 @@ build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test.py --bare-metal   -
 build/RISCV/gem5.opt --debug-flags=All configs/tutorial/part1/fs_linux_cu_test.py --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test/build/CU_test_demo.elf > gem5_cu_test_log_all.txt
 ```
 
-## 另开一个终端
+## 使用minor cpu运行
+
+```
+build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test.py --cpu-type=MinorCPU --caches --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test/build/CU_test_demo.elf
+```
+
+## 使用minor cpu运行--debug-flags=All
+
+```
+build/RISCV/gem5.opt --debug-flags=All configs/tutorial/part1/fs_linux_cu_test.py --cpu-type=MinorCPU --caches --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test/build/CU_test_demo.elf > gem5_cu_test_log_min_All.txt
+```
+
+# 另开一个终端
 
 ```
 m5term localhost 3456

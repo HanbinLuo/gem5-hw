@@ -246,7 +246,7 @@ if args.virtio_rng:
 system.my_compute = MyCompute(
     pio_addr=0x10009000,  # 选择地址，须与 guest 驱动/DTB 一致
     pio_size=0x8,  # data(0) + status(4) -> 8 bytes 区域
-    pio_latency="1000ns",  # 可选，设备响应延迟
+    pio_latency="10ms",  # 可选，设备响应延迟
 )
 
 system.my_compute.pio = system.iobus.mem_side_ports
@@ -340,6 +340,8 @@ for i in range(np):
 uncacheable_range = [
     *system.platform._on_chip_ranges(),
     *system.platform._off_chip_ranges(),
+    # 标记为不可缓存，修复minorcpu运行错误
+    AddrRange(system.my_compute.pio_addr, size=system.my_compute.pio_size),
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)

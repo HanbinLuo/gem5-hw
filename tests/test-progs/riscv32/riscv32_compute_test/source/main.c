@@ -61,6 +61,11 @@ int main( void )
 
         printf("%d - %d= %u\n", a,b,res);
         printf("Compute cycles: %d \n", (int)cycles);
-
-	return 0;
+//为什么atomic cpu是1倍pioDelay
+//不考虑寄存器读写延迟
+//为什么minor cpu是2倍pioDelay
+//写操作耗时：1 倍 pioDelay（计算任务同时开始延时）。
+//读操作耗时：1 倍 pioDelay
+//总耗时：理论上约 2 倍 pioDelay
+        return 0;
 }
