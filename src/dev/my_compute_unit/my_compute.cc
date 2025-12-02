@@ -1,5 +1,3 @@
-#include "my_compute_unit/my_compute.hh"
-
 #include <cstring>
 #include <iostream>
 
@@ -8,6 +6,7 @@
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 #include "my_compute_unit/debug/MyCompute.hh"
+#include "my_compute_unit/my_compute.hh"
 
 namespace gem5 {
 
