@@ -4,11 +4,12 @@
 #include <stdint.h>
 
 #define CU_BASE    0x10009000UL
-#define CU_OP_A    (CU_BASE + 0)
-#define CU_OP_B    (CU_BASE + 1)
-#define CU_CONFIG  (CU_BASE + 2)
-#define CU_RESULT  (CU_BASE + 3)
-#define CU_STATUS  (CU_BASE + 4)
+#define CU_OP_A    (CU_BASE + 0x00)
+#define CU_OP_B    (CU_BASE + 0x10)
+#define CU_RESULT  (CU_BASE + 0x20)
+#define CU_LENGTH  (CU_BASE + 0x30)
+#define CU_CONFIG  (CU_BASE + 0x31)
+#define CU_STATUS  (CU_BASE + 0x32)
 
 // 简单的 MMIO 读写（8-bit）
 static inline void mmio_write8(uintptr_t addr, uint8_t v) {
@@ -48,7 +49,6 @@ int main( void )
     unsigned long long t0 = rdcycle64();
     mmio_write8(CU_CONFIG, cfg);
 
-    printf("waiting for computation to complete\n");
     // 轮询 status bit0 == 1
     while ((mmio_read8(CU_STATUS) & 0x1) == 0) {
          //printf(".");

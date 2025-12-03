@@ -9,12 +9,17 @@
 #include "debug/MyCompute.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
+#include "sim/system.hh"
 
 namespace gem5 {
 
 MyCompute::MyCompute(const Params &p)
-    : BasicPioDevice(p, p.pio_size), computeEvent(*this)
+    : BasicPioDevice(p, p.pio_size), computeDelay(p.compute_latency),
+      computeEvent(*this)
 {
+    std::memset(op_a, 0, sizeof(op_a));
+    std::memset(op_b, 0, sizeof(op_b));
+    std::memset(result, 0, sizeof(result));
 }
 
 Tick
@@ -48,14 +53,20 @@ MyCompute::read(PacketPtr pkt)
         for (unsigned i = 0; i < pkt->getSize(); ++i) {
             Addr off = offset + i;
             uint8_t val = 0;
-            switch (off) {
-            case 0: val = op_a; break;
-            case 1: val = op_b; break;
-            case 2: val = config; break;
-            case 3: val = result; break;
-            case 4: val = status & 0x1; break;
-            default: val = 0; break;
-            }
+            if (off < 16)
+                val = op_a[off];
+            else if (off < 32)
+                val = op_b[off - 16];
+            else if (off < 48)
+                val = result[off - 32];
+            else if (off == 48)
+                val = length;
+            else if (off == 49)
+                val = config;
+            else if (off == 50)
+                val = status & 0x1;
+            else
+                val = 0;
             buf[i] = val;
         }
 
@@ -69,28 +80,40 @@ MyCompute::read(PacketPtr pkt)
     // Non-atomic/timing read: fill packet buffer or set LE value for size==1
     if (pkt->getSize() == 1) {
         uint8_t val = 0;
-        switch (offset) {
-        case 0: val = op_a; break;
-        case 1: val = op_b; break;
-        case 2: val = config; break;
-        case 3: val = result; break;
-        case 4: val = status & 0x1; break;
-        default: val = 0; break;
-        }
+        if (offset < 16)
+            val = op_a[offset];
+        else if (offset < 32)
+            val = op_b[offset - 16];
+        else if (offset < 48)
+            val = result[offset - 32];
+        else if (offset == 48)
+            val = length;
+        else if (offset == 49)
+            val = config;
+        else if (offset == 50)
+            val = status & 0x1;
+        else
+            val = 0;
         pkt->setLE<uint8_t>(val);
     } else {
         uint8_t *buf = pkt->getPtr<uint8_t>();
         for (unsigned i = 0; i < pkt->getSize(); ++i) {
             Addr off = offset + i;
             uint8_t val = 0;
-            switch (off) {
-            case 0: val = op_a; break;
-            case 1: val = op_b; break;
-            case 2: val = config; break;
-            case 3: val = result; break;
-            case 4: val = status & 0x1; break;
-            default: val = 0; break;
-            }
+            if (off < 16)
+                val = op_a[off];
+            else if (off < 32)
+                val = op_b[off - 16];
+            else if (off < 48)
+                val = result[off - 32];
+            else if (off == 48)
+                val = length;
+            else if (off == 49)
+                val = config;
+            else if (off == 50)
+                val = status & 0x1;
+            else
+                val = 0;
             buf[i] = val;
         }
     }
@@ -133,28 +156,30 @@ MyCompute::write(PacketPtr pkt)
     for (unsigned i = 0; i < pkt->getSize(); ++i) {
         Addr off = offset + i;
         uint8_t v = buf[i];
-        switch (off) {
-        case 0: op_a = v; break;
-        case 1: op_b = v; break;
-        case 2:
+        if (off < 16) {
+            op_a[off] = v;
+        } else if (off < 32) {
+            op_b[off - 16] = v;
+        } else if (off < 48) {
+            // result is read-only; ignore writes
+        } else if (off == 48) {
+            length = v;
+        } else if (off == 49) {
             config = v;
             // trigger computation on config write:
             //  clear done, schedule compute
             status &= ~0x1; // clear done bit
-            //多加一个访问寄存器的延迟
-            schedule(&computeEvent, curTick() + pioDelay + pioDelay);
-            break;
-        case 3:
-            // result is read-only; ignore writes
-            break;
-        case 4:
+            {//计划实现根据配置长度启动计算延迟
+                Tick when = curTick() + computeDelay;
+                if (!sys->isAtomicMode()) {
+                    when += pioDelay;
+                }
+                schedule(&computeEvent, when);
+            }
+        } else if (off == 50) {
             // allow clearing the done bit by writing 0
             if ((v & 0x1) == 0)
                 status &= ~0x1;
-            break;
-        default:
-            // ignore
-            break;
         }
     }
 
@@ -173,12 +198,18 @@ void
 MyCompute::completeOperation()
 {
     // perform operation based on config bit0
-    if ((config & 0x1) == 0) {
-        // add
-        result = static_cast<uint8_t>(op_a + op_b);
-    } else {
-        // sub
-        result = static_cast<uint8_t>(op_a - op_b);
+    // Limit length to 16
+    uint8_t len = (length > 16) ? 16 : length;
+    if (len == 0) len = 1; // Default to 1 if 0? Or just do nothing? Let's assume at least 1.
+
+    for (int i = 0; i < len; ++i) {
+        if ((config & 0x1) == 0) {
+            // add
+            result[i] = static_cast<uint8_t>(op_a[i] + op_b[i]);
+        } else {
+            // sub
+            result[i] = static_cast<uint8_t>(op_a[i] - op_b[i]);
+        }
     }
 
     // set done flag
@@ -186,14 +217,19 @@ MyCompute::completeOperation()
 
     // notify (if bus wants to detect changes, this could be extended)
 
-    std::cout << "MyCompute: Compute complete: " << unsigned(op_a)
-              << ( (config & 0x1) ? " - " : " + " ) << unsigned(op_b)
-              << " = " << unsigned(result) << "\n";
+    std::cout << "MyCompute: Compute complete (len=" << unsigned(len) << ")\n";
+    for (int i = 0; i < len; ++i) {
+        std::cout << "  [" << i << "]: " << unsigned(op_a[i])
+                  << ( (config & 0x1) ? " - " : " + " ) << unsigned(op_b[i])
+                  << " = " << unsigned(result[i]) << "\n";
+    }
     std::cout << "Address: 0x" << std::hex << pioAddr << std::dec
               << ", Range: " << pioSize
-              << ", Delay: " << pioDelay << std::endl;
+              << ", Delay: " << pioDelay
+              << ", Compute Delay: " << computeDelay << std::endl;
     //CPU 时钟周期是 500 ticks，除以 500 得到周期数
     std::cout << "Delay cycles: " << (pioDelay / 500) << std::endl;
+    std::cout << "Compute Delay cycles: " << (computeDelay / 500) << std::endl;
 }
 
 

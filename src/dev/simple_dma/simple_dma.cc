@@ -10,11 +10,11 @@ namespace gem5 {
 
 SimpleDMA::SimpleDMA(const Params &p)
   : DmaDevice(p),
-    readDoneEvent(this),
-    writeDoneEvent(this),
     pioAddr(p.pio_addr),
     pioSize(p.pio_size),
-    pioDelay(p.pio_latency)
+    pioDelay(p.pio_latency),
+    readDoneEvent(this),
+    writeDoneEvent(this)
 {
     DPRINTF(SimpleDMA,
             "SimpleDMA created at pio_addr=%#lx size=%#lx latency=%llu\n",

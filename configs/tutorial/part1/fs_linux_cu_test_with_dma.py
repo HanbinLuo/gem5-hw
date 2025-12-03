@@ -241,6 +241,18 @@ if args.virtio_rng:
         vio=VirtIORng(), interrupt_id=0x8, pio_size=4096, pio_addr=0x10007000
     )
 
+# Simple DMA
+system.dma = SimpleDMA(
+    pio_addr=0x50000000, pio_size=0x1000, pio_latency="10ns"
+)
+
+# 1) PIO 端口：让 CPU 通过总线访问寄存器
+system.dma.pio = system.membus.mem_side_ports
+# system.dma.pio = system.iobus.mem_side_ports
+
+# 2) DMA 端口：真正做内存访问
+system.dma.dma = system.membus.cpu_side_ports
+
 # 在 fs_linux.py 中创建设备（示例地址与大小）
 
 system.my_compute = MyCompute(

@@ -22,12 +22,16 @@ class MyCompute : public BasicPioDevice
 
   private:
     // use pioAddr/pioSize/pioDelay from BasicPioDevice
-    // Compute unit registers (all 8-bit)
-    uint8_t op_a{0};      // offset 0
-    uint8_t op_b{0};      // offset 1
-    uint8_t config{0};    // offset 2 (bit0: 0=add, 1=sub)
-    uint8_t result{0};    // offset 3
-    uint8_t status{0};    // offset 4 (bit0 = done)
+    // Compute unit registers
+    uint8_t op_a[16];     // offset 0x00 - 0x0F
+    uint8_t op_b[16];     // offset 0x10 - 0x1F
+    uint8_t result[16];   // offset 0x20 - 0x2F
+    uint8_t length{1};    // offset 0x30
+    uint8_t config{0};    // offset 0x31 (bit0: 0=add, 1=sub)
+    uint8_t status{0};    // offset 0x32 (bit0 = done)
+
+    // Latency for the computation operation
+    const Tick computeDelay;
 
     // Event to model compute delay
     MemberEventWrapper<&MyCompute::completeOperation> computeEvent;
