@@ -67,5 +67,18 @@ int main( void )
 //写操作耗时：1 倍 pioDelay（计算任务同时开始延时）。
 //读操作耗时：1 倍 pioDelay
 //总耗时：理论上约 2 倍 pioDelay
+
+    printf("测量单次写操作耗时\n");
+    t0 = rdcycle64();
+    mmio_write8(CU_OP_A, a);
+    t1 = rdcycle64();
+    printf("Write cycles: %d \n", (int)(t1 - t0));
+
+    printf("测量单次读操作耗时\n");
+    t0 = rdcycle64();
+    mmio_read8(CU_RESULT);
+    t1 = rdcycle64();
+    printf("read cycles: %d \n", (int)(t1 - t0));
+
         return 0;
 }
