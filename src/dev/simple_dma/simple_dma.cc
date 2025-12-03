@@ -1,5 +1,5 @@
 // simple_dma.cc
-#include "dev/simple_dma.hh"
+#include "dev/simple_dma/simple_dma.hh"
 
 #include "base/trace.hh"
 #include "debug/SimpleDMA.hh"

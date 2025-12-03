@@ -5,7 +5,8 @@
 
 #include "base/logging.hh"
 #include "base/trace.hh"
-#include "dev/my_compute_unit/debug/MyCompute.hh"
+//#include "dev/my_compute_unit/debug/MyCompute.hh"
+#include "debug/MyCompute.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 

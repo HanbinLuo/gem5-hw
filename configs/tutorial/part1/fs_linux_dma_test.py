@@ -214,11 +214,23 @@ system.membus = MemBus()
 
 system.system_port = system.membus.cpu_side_ports
 
+
+# Simple DMA
+system.dma = SimpleDMA(pio_addr=0x50000000, pio_size=0x1000)
+
+# 1) PIO 端口：让 CPU 通过总线访问寄存器
+system.dma.pio = system.membus.mem_side_ports
+# system.dma.pio = system.iobus.mem_side_ports
+
+# 2) DMA 端口：真正做内存访问
+system.dma.dma = system.membus.cpu_side_ports
+
+
 # HiFive Platform
 system.platform = HiFive()
 
 # RTCCLK (Set to 100MHz for faster simulation)
-system.platform.rtc = RiscvRTC(frequency=Frequency("100MHz"))
+system.platform.rtc = RiscvRTC(frequency=Frequency("10MHz"))
 system.platform.clint.int_pin = system.platform.rtc.int_pin
 system.platform.pci_host.pio = system.iobus.mem_side_ports
 
@@ -322,6 +334,8 @@ for i in range(np):
 uncacheable_range = [
     *system.platform._on_chip_ranges(),
     *system.platform._off_chip_ranges(),
+    # DMA寄存器不可缓存
+    AddrRange(system.dma.pio_addr, size=system.dma.pio_size),
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)

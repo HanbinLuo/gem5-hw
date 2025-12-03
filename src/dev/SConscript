@@ -55,8 +55,4 @@ Source('pixelpump.cc')
 DebugFlag('Intel8254Timer')
 DebugFlag('MC146818')
 
-SimObject('SimpleDMA.py', sim_objects=['SimpleDMA'])
-Source('simple_dma.cc')
-DebugFlag('SimpleDMA')  # ← 新加这一行
-
 GTest('reg_bank.test', 'reg_bank.test.cc', with_tag('gem5 trace'))
