@@ -217,9 +217,8 @@ system.system_port = system.membus.cpu_side_ports
 
 # Simple DMA
 system.dma = SimpleDMA(
-    pio_addr=0x50000000, 
-    pio_size=0x1000,
-    pio_latency="10ns")
+    pio_addr=0x50000000, pio_size=0x1000, pio_latency="10ns"
+)
 
 # 1) PIO 端口：让 CPU 通过总线访问寄存器
 system.dma.pio = system.membus.mem_side_ports
@@ -338,7 +337,7 @@ uncacheable_range = [
     *system.platform._on_chip_ranges(),
     *system.platform._off_chip_ranges(),
     # DMA寄存器不可缓存
-    #AddrRange(system.dma.pio_addr, size=system.dma.pio_size),
+    # AddrRange(system.dma.pio_addr, size=system.dma.pio_size),
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)
