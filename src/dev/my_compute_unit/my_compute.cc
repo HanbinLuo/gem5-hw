@@ -140,7 +140,8 @@ MyCompute::write(PacketPtr pkt)
             // trigger computation on config write:
             //  clear done, schedule compute
             status &= ~0x1; // clear done bit
-            schedule(&computeEvent, curTick() + pioDelay);
+            //多加一个访问寄存器的延迟
+            schedule(&computeEvent, curTick() + pioDelay + pioDelay);
             break;
         case 3:
             // result is read-only; ignore writes
