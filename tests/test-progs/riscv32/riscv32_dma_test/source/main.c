@@ -20,8 +20,8 @@ static simple_dma_regs_t * const dma =
     (simple_dma_regs_t *)DMA_BASE;
 
 /* 假设 DRAM 起始 0x80000000，这里随便两个 buffer */
-#define SRC_BUF  0x80001000u
-#define DST_BUF  0x80002000u
+#define SRC_BUF  0x90001000u
+#define DST_BUF  0x90004000u
 
 static void dma_memcpy(void *dst, const void *src, uint32_t len)
 {
@@ -53,28 +53,35 @@ int main( void )
         dst[i] = 0;
     }
 
+    printf("simple dma测试开始\n");
     /* 调用 DMA 搬运 */
     dma_memcpy(dst, src, len);
 
     /* 校验结果 */
     int ok = 1;
     for (uint32_t i = 0; i < len; ++i) {
+        //printf("dst[%d] = %d ,src[%d] = %d\n",(int)i,(int)dst[i],(int)i,(int)src[i]);
+        printf("索引=%d ",(int)i);
+        printf("src=%d ",(int)src[i]);
+        printf("dst=%d\n",(int)dst[i]);
         if (dst[i] != src[i]) {
             ok = 0;
             break;
         }
     }
 
-    printf("simple dma测试\n");
+    
 
     if (ok) {
         while (1) {
             /* 成功状态，可以在这里插 NOP 等待调试 */
-            printf("ok\n");
+            //printf("ok\n");
         }
     } else {
         while (1) {
             printf("not ok\n");
+            printf("src=%d ",(int)src[3]);
+            printf("dst=%d\n",(int)dst[3]);
         }
     }
 
