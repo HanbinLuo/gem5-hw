@@ -216,7 +216,10 @@ system.system_port = system.membus.cpu_side_ports
 
 
 # Simple DMA
-system.dma = SimpleDMA(pio_addr=0x50000000, pio_size=0x1000)
+system.dma = SimpleDMA(
+    pio_addr=0x50000000, 
+    pio_size=0x1000,
+    pio_latency="10ns")
 
 # 1) PIO 端口：让 CPU 通过总线访问寄存器
 system.dma.pio = system.membus.mem_side_ports
