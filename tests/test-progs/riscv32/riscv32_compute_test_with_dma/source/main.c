@@ -48,7 +48,7 @@ static simple_dma_regs_t * const dma =
 
 /* 假设 DRAM 起始 0x80000000，这里随便两个 buffer */
 #define SRC_BUF  0x90001000u
-#define DST_BUF  0x90004000u
+#define DST_BUF  0x90002000u
 
 static void dma_memcpy(void *dst, const void *src, uint32_t len)
 {

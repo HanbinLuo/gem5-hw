@@ -250,8 +250,11 @@ system.dma = SimpleDMA(
 system.dma.pio = system.membus.mem_side_ports
 # system.dma.pio = system.iobus.mem_side_ports
 
-# 2) DMA 端口：连接到 iobus，通过 IOCache 维护缓存一致性
-system.dma.dma = system.iobus.cpu_side_ports
+# # 2) DMA 端口：连接到 iobus，通过 IOCache 维护缓存一致性
+# system.dma.dma = system.iobus.cpu_side_ports
+
+# 2) DMA 端口：真正做内存访问
+system.dma.dma = system.membus.cpu_side_ports
 
 # 在 fs_linux.py 中创建设备（示例地址与大小）
 
@@ -357,6 +360,8 @@ uncacheable_range = [
     AddrRange(system.my_compute.pio_addr, size=system.my_compute.pio_size),
     # DMA 寄存器必须标记为不可缓存
     AddrRange(system.dma.pio_addr, size=system.dma.pio_size),
+    # 搬移地址也不可缓存
+    AddrRange(0x90001000,size=0x2000),
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)
