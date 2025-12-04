@@ -222,10 +222,9 @@ system.dma = SimpleDMA(
 
 # 1) PIO 端口：让 CPU 通过总线访问寄存器
 system.dma.pio = system.membus.mem_side_ports
-# system.dma.pio = system.iobus.mem_side_ports
 
-# 2) DMA 端口：真正做内存访问
-system.dma.dma = system.membus.cpu_side_ports
+# 2) DMA 端口：连接到 iobus，通过 IOCache 维护缓存一致性
+system.dma.dma = system.iobus.cpu_side_ports
 
 
 # HiFive Platform
@@ -336,8 +335,8 @@ for i in range(np):
 uncacheable_range = [
     *system.platform._on_chip_ranges(),
     *system.platform._off_chip_ranges(),
-    # DMA寄存器不可缓存
-    # AddrRange(system.dma.pio_addr, size=system.dma.pio_size),
+    # DMA 寄存器必须标记为不可缓存
+    AddrRange(system.dma.pio_addr, size=system.dma.pio_size),
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)

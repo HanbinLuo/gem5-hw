@@ -144,6 +144,15 @@ make all
 build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test_with_dma.py --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test_with_dma/build/CU_test_demo_with_dma.elf
 ```
 
+## minor cpu运行
+
+### 直接运行
+
+```
+build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test_with_dma.py --cpu-type=MinorCPU --caches --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test_with_dma/build/CU_test_demo_with_dma.elf
+```
+
+
 ### 另开一个终端
 
 ```
