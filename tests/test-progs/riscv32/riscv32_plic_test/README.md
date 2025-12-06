@@ -69,7 +69,7 @@ https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic-1.0.0.pdf
 
 3. make qemu
 
-4. 退出qemu: 
+4. 退出qemu:
 
    **Ctrl** + **a** + **x**
 
@@ -80,6 +80,3 @@ https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic-1.0.0.pdf
 更多信息，请关注B站 **芯片人阿伟**：
 
 https://space.bilibili.com/243180540
-
-
-
