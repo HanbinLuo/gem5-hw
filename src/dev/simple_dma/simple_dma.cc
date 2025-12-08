@@ -13,6 +13,8 @@ SimpleDMA::SimpleDMA(const Params &p)
     pioAddr(p.pio_addr),
     pioSize(p.pio_size),
     pioDelay(p.pio_latency),
+    platform(p.platform),
+    interruptId(p.interrupt_id),
     readDoneEvent(this),
     writeDoneEvent(this)
 {
@@ -123,7 +125,10 @@ SimpleDMA::onWriteDone()
     DPRINTF(SimpleDMA, "onWriteDone: copy finished\n");
     busy = false;
     done = true;
-    // TODO: 预留拉高中断位置
+
+    if (platform) {
+        platform->postPciInt(interruptId);
+    }
 }
 
 } // namespace gem5

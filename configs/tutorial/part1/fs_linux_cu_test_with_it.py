@@ -243,7 +243,11 @@ if args.virtio_rng:
 
 # Simple DMA
 system.dma = SimpleDMA(
-    pio_addr=0x50000000, pio_size=0x1000, pio_latency="10ns"
+    pio_addr=0x50000000,
+    pio_size=0x1000,
+    pio_latency="10ns",
+    interrupt_id=0xC,
+    platform=system.platform,
 )
 
 # 1) PIO 端口：让 CPU 通过总线访问寄存器
@@ -290,6 +294,7 @@ system.platform.attachPlic()
 system.platform.plic.n_src = max(
     getattr(system.platform.plic, "n_src", 0),
     int(system.my_compute.interrupt_id) + 1,
+    int(system.dma.interrupt_id) + 1,
 )
 # ==============================================================
 system.platform.setNumCores(np)

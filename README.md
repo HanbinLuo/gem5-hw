@@ -152,6 +152,53 @@ build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test_with_dma.py --bare-
 build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test_with_dma.py --cpu-type=MinorCPU --caches --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_compute_test_with_dma/build/CU_test_demo_with_dma.elf
 ```
 
+### 另开一个终端
+
+```
+m5term localhost 3456
+```
+
+# 中断测试
+
+中断自动触发dma分别搬运16个数到cu的寄存器，计算完成再dma搬回，更改了计算单元和DMA底层，上面的命令都不能再使用，需要换成新的顶层
+
+## 清理
+
+```
+scons -c build/RISCV/gem5.opt
+```
+
+## 编译
+
+```
+scons -j$(nproc) build/RISCV/gem5.opt
+```
+
+## 编译联调测试elf
+
+```
+cd tests/test-progs/riscv32/riscv32_plic_test_cu
+```
+
+```
+make all
+```
+
+## atomic cpu运行
+
+### 直接运行
+
+```
+build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test_with_it.py --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_plic_test_cu/build/riscv32_plic_test.elf
+```
+
+## minor cpu运行
+
+### 直接运行
+
+```
+build/RISCV/gem5.opt configs/tutorial/part1/fs_linux_cu_test_with_it.py --cpu-type=MinorCPU --caches --bare-metal   --riscv-32bits --num-cpus 2 --kernel tests/test-progs/riscv32/riscv32_plic_test_cu/build/riscv32_plic_test.elf
+```
 
 ### 另开一个终端
 

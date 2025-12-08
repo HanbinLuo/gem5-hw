@@ -16,12 +16,16 @@ void plic_init(void)
   PLIC_REG(PLIC_PRIORITY + UART0_IRQ*4) = 1;
   /* 为 MyCompute 设备添加优先级（中断号 0xB / 11），设备在完成时会触发此中断 */
   PLIC_REG(PLIC_PRIORITY + 0xB * 4) = 1;
+  /* 为 SimpleDMA 添加优先级（中断号 0xC / 12）*/
+  PLIC_REG(PLIC_PRIORITY + 0xC * 4) = 1;
     // set threshold
     PLIC_REG(PLIC_MTHRESHOLD(0)) = 0;
     // enable
   PLIC_REG(PLIC_MENABLE(0)) = 1 << UART0_IRQ;
   /* 使能 MyCompute 的中断位 */
   PLIC_REG(PLIC_MENABLE(0)) |= (1 << 0xB);
+  /* 使能 SimpleDMA 的中断位 (IRQ 0xC) */
+  PLIC_REG(PLIC_MENABLE(0)) |= (1 << 0xC);
 }
 
 // ask the PLIC what interrupt we should serve.
