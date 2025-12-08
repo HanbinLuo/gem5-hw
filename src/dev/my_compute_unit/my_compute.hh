@@ -2,13 +2,14 @@
 #define DEV_MY_COMPUTE_HH
 
 #include "dev/io_device.hh"
+#include "dev/riscv/plic_device.hh"
 #include "params/MyCompute.hh"
 #include "sim/eventq.hh"
 
 namespace gem5
 {
 
-class MyCompute : public BasicPioDevice
+class MyCompute : public PlicIntDevice
 {
   public:
     using Params = MyComputeParams;
