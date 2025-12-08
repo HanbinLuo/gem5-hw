@@ -1,5 +1,7 @@
 #include "dev/my_compute_unit/my_compute.hh"
 
+#include "dev/riscv/plic_device.hh"
+
 #include <cstring>
 #include <iostream>
 
@@ -14,8 +16,7 @@
 namespace gem5 {
 
 MyCompute::MyCompute(const Params &p)
-    : BasicPioDevice(p, p.pio_size), computeDelay(p.compute_latency),
-      computeEvent(*this)
+    : PlicIntDevice(p), computeDelay(p.compute_latency), computeEvent(*this)
 {
     std::memset(op_a, 0, sizeof(op_a));
     std::memset(op_b, 0, sizeof(op_b));
@@ -178,8 +179,14 @@ MyCompute::write(PacketPtr pkt)
             }
         } else if (off == 50) {
             // allow clearing the done bit by writing 0
-            if ((v & 0x1) == 0)
+            if ((v & 0x1) == 0) {
                 status &= ~0x1;
+                // 如果正在向 PLIC 清除中断，也同时通知平台
+                if (platform) {
+                    DPRINTF(MyCompute, "Clearing PLIC interrupt id %d\n", _interruptID);
+                    platform->clearPciInt(_interruptID);
+                }
+            }
         }
     }
 
@@ -230,6 +237,11 @@ MyCompute::completeOperation()
     //CPU 时钟周期是 500 ticks，除以 500 得到周期数
     std::cout << "Delay cycles: " << (pioDelay / 500) << std::endl;
     std::cout << "Compute Delay cycles: " << (computeDelay / 500) << std::endl;
+    // 触发 PLIC 中断，通知处理器：计算单元完成
+    if (platform) {
+        DPRINTF(MyCompute, "Posting PLIC interrupt id %d\n", _interruptID);
+        platform->postPciInt(_interruptID);
+    }
 }
 
 
