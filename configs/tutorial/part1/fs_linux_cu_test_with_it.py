@@ -269,7 +269,7 @@ system.my_compute = MyCompute(
 
 system.my_compute.pio = system.iobus.mem_side_ports
 # system.my_compute.pio = system.membus.mem_side_ports
- 
+
 
 system.bridge = Bridge(delay="50ns")
 system.bridge.mem_side_port = system.iobus.cpu_side_ports
@@ -288,7 +288,8 @@ system.platform.attachPlic()
 # 因此需要确保 PLIC 的源数量 n_src 覆盖该中断号。这里显式保证 plic.n_src
 # 包含 MyCompute 的 interrupt_id（默认在 MyCompute.py 中设为 0xB），并保留注释。
 system.platform.plic.n_src = max(
-    getattr(system.platform.plic, 'n_src', 0), int(system.my_compute.interrupt_id) + 1
+    getattr(system.platform.plic, "n_src", 0),
+    int(system.my_compute.interrupt_id) + 1,
 )
 # ==============================================================
 system.platform.setNumCores(np)
@@ -372,7 +373,7 @@ uncacheable_range = [
     # DMA 寄存器必须标记为不可缓存
     AddrRange(system.dma.pio_addr, size=system.dma.pio_size),
     # 搬移地址也不可缓存
-    AddrRange(0x90001000,size=0x2000),
+    AddrRange(0x90001000, size=0x2000),
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)
