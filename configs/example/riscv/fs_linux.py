@@ -233,9 +233,13 @@ system.dma.dma = system.membus.cpu_side_ports
 system.platform = HiFive()
 
 # RTCCLK (Set to 100MHz for faster simulation)
-system.platform.rtc = RiscvRTC(frequency=Frequency("10MHz"))
+system.platform.rtc = RiscvRTC(frequency=Frequency("100MHz"))
 system.platform.clint.int_pin = system.platform.rtc.int_pin
 system.platform.pci_host.pio = system.iobus.mem_side_ports
+
+system.platform.my_sensor = SimplePlicSource(pio_addr=0x10001000, pio_size=0x1000, interrupt_id=0xB)
+system.platform.my_sensor.pio = system.iobus.mem_side_ports
+
 
 # VirtIOMMIO
 if args.disk_image:
@@ -337,6 +341,10 @@ for i in range(np):
 uncacheable_range = [
     *system.platform._on_chip_ranges(),
     *system.platform._off_chip_ranges(),
+    # SimpleDMA 寄存器所在的 MMIO 区域：0x5000_0000 ~ 0x5000_0FFF
+    AddrRange(0x50000000, size=0x1000),
+    # DMA buffer 区域: 0x80001000~0x80002FFF
+    AddrRange(0x80001000, size=0x4000), 
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)

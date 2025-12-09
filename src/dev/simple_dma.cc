@@ -105,7 +105,7 @@ SimpleDMA::startCopy()
     DPRINTF(SimpleDMA, "startCopy: src=%#lx dst=%#lx len=%u\n",
             srcAddr, dstAddr, length);
 
-    dmaRead(srcAddr, length, &readDoneEvent, buffer.data());
+    dmaRead(srcAddr, length, &readDoneEvent, buffer.data(), 10);
 }
 
 // 读完成回调
@@ -113,7 +113,7 @@ void
 SimpleDMA::onReadDone()
 {
     DPRINTF(SimpleDMA, "onReadDone: issuing dmaWrite\n");
-    dmaWrite(dstAddr, length, &writeDoneEvent, buffer.data());
+    dmaWrite(dstAddr, length, &writeDoneEvent, buffer.data(), 10);
 }
 
 // 写完成回调
