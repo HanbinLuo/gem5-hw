@@ -45,7 +45,10 @@ add_executable(freertos_virt_demo
     start.S
     main.c
     freertos_dag_example.c
+    dag_runtime.c
+    cu_offload.c
     utils.c
+    uart16550.c
 )
 
 set(TARGET_COMMON_FLAGS
