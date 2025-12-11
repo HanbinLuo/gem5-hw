@@ -3,7 +3,6 @@
 #define __DEV_SIMPLE_DMA_HH__
 
 #include "dev/dma_device.hh"
-#include "dev/platform.hh"
 #include "params/SimpleDMA.hh"
 
 namespace gem5 {
@@ -26,8 +25,6 @@ class SimpleDMA : public DmaDevice
     Addr pioAddr;
     Addr pioSize;
     Tick pioDelay;
-    Platform *platform;
-    int interruptId;
 
     Addr    srcAddr = 0;
     Addr    dstAddr = 0;

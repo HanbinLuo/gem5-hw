@@ -1,0 +1,5 @@
+Import('*')
+
+SimObject('ComputeUnit.py', sim_objects=['ComputeUnit'])
+Source('compute_unit.cc')
+DebugFlag('ComputeUnit')

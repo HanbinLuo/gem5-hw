@@ -215,19 +215,6 @@ system.membus = MemBus()
 system.system_port = system.membus.cpu_side_ports
 
 
-# Simple DMA
-system.dma = SimpleDMA(
-    pio_addr = 0x50000000,
-    pio_size = 0x1000
-)
-
-# 1) PIO 端口：让 CPU 通过总线访问寄存器
-system.dma.pio = system.membus.mem_side_ports
-# system.dma.pio = system.iobus.mem_side_ports
-
-# 2) DMA 端口：真正做内存访问
-system.dma.dma = system.membus.cpu_side_ports
-
 
 # HiFive Platform
 system.platform = HiFive()
@@ -237,8 +224,22 @@ system.platform.rtc = RiscvRTC(frequency=Frequency("100MHz"))
 system.platform.clint.int_pin = system.platform.rtc.int_pin
 system.platform.pci_host.pio = system.iobus.mem_side_ports
 
-system.platform.my_sensor = SimplePlicSource(pio_addr=0x10001000, pio_size=0x1000, interrupt_id=0xB)
-system.platform.my_sensor.pio = system.iobus.mem_side_ports
+# ---------------------------- Simple DMA --------------------------- #
+system.platform.simple_dma = SimpleDMA(
+    pio_addr = 0x50000000,
+    pio_size = 0x1000
+)
+# 连接 dma 端口到 membus
+system.platform.simple_dma.dma = system.membus.cpu_side_ports
+
+# ---------------------------- Compute Unit --------------------------- #
+system.platform.compute_unit = ComputeUnit(
+    pio_addr=0x10009000,  
+    pio_size=0x40,  
+    pio_latency="10ns",  
+    compute_latency="1ms",
+    interrupt_id=0xB,
+)
 
 
 # VirtIOMMIO
@@ -342,9 +343,13 @@ uncacheable_range = [
     *system.platform._on_chip_ranges(),
     *system.platform._off_chip_ranges(),
     # SimpleDMA 寄存器所在的 MMIO 区域：0x5000_0000 ~ 0x5000_0FFF
-    AddrRange(0x50000000, size=0x1000),
-    # DMA buffer 区域: 0x80001000~0x80002FFF
-    AddrRange(0x80001000, size=0x4000), 
+    # AddrRange(0x50000000, size=0x1000),
+    # # Bare-Metal RAM Region: 0x80000000(16M)
+    # AddrRange(0x80000000, size=0x1000000),
+    # # DMA buffer 区域: 0x80001000~0x80002FFF
+    # AddrRange(0x80001000, size=0x2000), 
+    # RAM区域范围
+    *system.mem_ranges, 
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)

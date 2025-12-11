@@ -1,4 +1,4 @@
-#include "dev/my_compute_unit/my_compute.hh"
+#include "dev/compute_unit/compute_unit.hh"
 
 #include "dev/riscv/plic_device.hh"
 
@@ -7,15 +7,14 @@
 
 #include "base/logging.hh"
 #include "base/trace.hh"
-//#include "dev/my_compute_unit/debug/MyCompute.hh"
-#include "debug/MyCompute.hh"
+#include "debug/ComputeUnit.hh"
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 #include "sim/system.hh"
 
 namespace gem5 {
 
-MyCompute::MyCompute(const Params &p)
+ComputeUnit::ComputeUnit(const Params &p)
     : PlicIntDevice(p), computeDelay(p.compute_latency), computeEvent(*this)
 {
     std::memset(op_a, 0, sizeof(op_a));
@@ -24,16 +23,16 @@ MyCompute::MyCompute(const Params &p)
 }
 
 Tick
-MyCompute::read(PacketPtr pkt)
+ComputeUnit::read(PacketPtr pkt)
 {
-    DPRINTF(MyCompute, "read addr\n");
+    DPRINTF(ComputeUnit, "read addr\n");
     //pkt->makeAtomicResponse();//lhb
     // Support atomic swap semantics and timing vs atomic responses.
     bool is_atomic = pkt->isAtomicOp() && pkt->cmd == MemCmd::SwapReq;
 
     Addr offset = pkt->getAddr() - pioAddr;
 
-        DPRINTF(MyCompute, "read addr=%#x offset=%#x size=%d atomic=%d\n",
+        DPRINTF(ComputeUnit, "read addr=%#x offset=%#x size=%d atomic=%d\n",
             pkt->getAddr(), offset, pkt->getSize(), is_atomic);
 
     // Bounds check: if offset is outside device PIO region, return default
@@ -125,21 +124,21 @@ MyCompute::read(PacketPtr pkt)
     else
         pkt->makeResponse();
 
-    DPRINTF(MyCompute, "read complete addr=%#x size=%d\n",
+    DPRINTF(ComputeUnit, "read complete addr=%#x size=%d\n",
             pkt->getAddr(), pkt->getSize());
 
     return pioDelay;
 }
 
 Tick
-MyCompute::write(PacketPtr pkt)
+ComputeUnit::write(PacketPtr pkt)
 {
     //pkt->makeAtomicResponse();//lhb
     bool is_atomic = pkt->isAtomicOp() && pkt->cmd == MemCmd::SwapReq;
 
     Addr offset = pkt->getAddr() - pioAddr;
 
-    DPRINTF(MyCompute, "write addr=%#x offset=%#x size=%d atomic=%d\n",
+    DPRINTF(ComputeUnit, "write addr=%#x offset=%#x size=%d atomic=%d\n",
             pkt->getAddr(), offset, pkt->getSize(), is_atomic);
 
     if (offset >= pioSize) {
@@ -183,7 +182,7 @@ MyCompute::write(PacketPtr pkt)
                 status &= ~0x1;
                 // 如果正在向 PLIC 清除中断，也同时通知平台
                 if (platform) {
-                    DPRINTF(MyCompute, "Clearing PLIC interrupt id %d\n", _interruptID);
+                    DPRINTF(ComputeUnit, "Clearing PLIC interrupt id %d\n", _interruptID);
                     platform->clearPciInt(_interruptID);
                 }
             }
@@ -195,14 +194,14 @@ MyCompute::write(PacketPtr pkt)
     else
         pkt->makeResponse();
 
-    DPRINTF(MyCompute, "write complete addr=%#x size=%d\n",
+    DPRINTF(ComputeUnit, "write complete addr=%#x size=%d\n",
             pkt->getAddr(), pkt->getSize());
 
     return pioDelay;
 }
 
 void
-MyCompute::completeOperation()
+ComputeUnit::completeOperation()
 {
     // perform operation based on config bit0
     // Limit length to 16
@@ -224,7 +223,7 @@ MyCompute::completeOperation()
 
     // notify (if bus wants to detect changes, this could be extended)
 
-    std::cout << "MyCompute: Compute complete (len=" << unsigned(len) << ")\n";
+    std::cout << "ComputeUnit: Compute complete (len=" << unsigned(len) << ")\n";
     for (int i = 0; i < len; ++i) {
         std::cout << "  [" << i << "]: " << unsigned(op_a[i])
                   << ( (config & 0x1) ? " - " : " + " ) << unsigned(op_b[i])
@@ -239,7 +238,7 @@ MyCompute::completeOperation()
     std::cout << "Compute Delay cycles: " << (computeDelay / 500) << std::endl;
     // 触发 PLIC 中断，通知处理器：计算单元完成
     if (platform) {
-        DPRINTF(MyCompute, "Posting PLIC interrupt id %d\n", _interruptID);
+        DPRINTF(ComputeUnit, "Posting PLIC interrupt id %d\n", _interruptID);
         platform->postPciInt(_interruptID);
     }
 }

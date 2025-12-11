@@ -243,7 +243,7 @@ if args.virtio_rng:
 
 # 在 fs_linux.py 中创建设备（示例地址与大小）
 
-system.my_compute = MyCompute(
+system.my_compute = ComputeUnit(
     pio_addr=0x10009000,  # 选择地址，须与 guest 驱动/DTB 一致
     pio_size=0x40,  # 64 bytes 区域
     pio_latency="10ns",  # 可选，设备响应延迟

@@ -3,17 +3,20 @@
 
 #include "dev/io_device.hh"
 #include "dev/riscv/plic_device.hh"
-#include "params/MyCompute.hh"
+#include "params/ComputeUnit.hh"
 #include "sim/eventq.hh"
 
 namespace gem5
 {
 
-class MyCompute : public PlicIntDevice
+class ComputeUnit : public PlicIntDevice
 {
+  protected:
+    int _computeUnit;
+
   public:
-    using Params = MyComputeParams;
-    MyCompute(const Params &p);
+    using Params = ComputeUnitParams;
+    ComputeUnit(const Params &p);
 
     // PIO-style access: devices implement read/write
     Tick read(PacketPtr pkt) override;
@@ -35,7 +38,7 @@ class MyCompute : public PlicIntDevice
     const Tick computeDelay;
 
     // Event to model compute delay
-    MemberEventWrapper<&MyCompute::completeOperation> computeEvent;
+    MemberEventWrapper<&ComputeUnit::completeOperation> computeEvent;
 };
 
 } // namespace gem5

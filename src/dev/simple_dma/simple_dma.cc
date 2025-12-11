@@ -10,13 +10,11 @@ namespace gem5 {
 
 SimpleDMA::SimpleDMA(const Params &p)
   : DmaDevice(p),
+    readDoneEvent(this),
+    writeDoneEvent(this),
     pioAddr(p.pio_addr),
     pioSize(p.pio_size),
-    pioDelay(p.pio_latency),
-    platform(p.platform),
-    interruptId(p.interrupt_id),
-    readDoneEvent(this),
-    writeDoneEvent(this)
+    pioDelay(p.pio_latency)
 {
     DPRINTF(SimpleDMA,
             "SimpleDMA created at pio_addr=%#lx size=%#lx latency=%llu\n",
@@ -107,7 +105,7 @@ SimpleDMA::startCopy()
     DPRINTF(SimpleDMA, "startCopy: src=%#lx dst=%#lx len=%u\n",
             srcAddr, dstAddr, length);
 
-    dmaRead(srcAddr, length, &readDoneEvent, buffer.data());
+    dmaRead(srcAddr, length, &readDoneEvent, buffer.data(), 10);
 }
 
 // 读完成回调
@@ -115,7 +113,7 @@ void
 SimpleDMA::onReadDone()
 {
     DPRINTF(SimpleDMA, "onReadDone: issuing dmaWrite\n");
-    dmaWrite(dstAddr, length, &writeDoneEvent, buffer.data());
+    dmaWrite(dstAddr, length, &writeDoneEvent, buffer.data(), 10);
 }
 
 // 写完成回调
@@ -125,10 +123,7 @@ SimpleDMA::onWriteDone()
     DPRINTF(SimpleDMA, "onWriteDone: copy finished\n");
     busy = false;
     done = true;
-
-    if (platform) {
-        platform->postPciInt(interruptId);
-    }
+    // TODO: 预留拉高中断位置
 }
 
 } // namespace gem5

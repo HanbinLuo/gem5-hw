@@ -198,7 +198,13 @@ class HiFive(HiFiveBase):
 
     def _on_chip_devices(self):
         """Returns a list of on-chip peripherals"""
-        return [self.clint, self.plic]
+        devices = [self.clint, self.plic]
+        # 添加 simple_dma 为 on-chip 外设
+        if hasattr(self, "simple_dma"):
+            devices.append(self.simple_dma)
+        return devices
+        # return [self.clint, self.plic]
+        
 
     def _off_chip_devices(self):
         """Returns a list of off-chip peripherals"""
@@ -207,6 +213,9 @@ class HiFive(HiFiveBase):
             devices.append(self.disk)
         if hasattr(self, "rng"):
             devices.append(self.rng)
+        # 添加 compute unit 为 off-chip 外设
+        if hasattr(self, "compute_unit"):
+            devices.append(self.compute_unit)
         return devices
 
     def attachPlic(self):
