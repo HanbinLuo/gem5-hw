@@ -84,11 +84,14 @@ static void prvPrimaryCoreInit(void) {
   prvUartInit();
   LOGF("FreeRTOS SMP demo (QEMU RV32 virt)\n");
 
-  /* 3) 使能机器外部中断 */
-  vEnableMachineExternalInterrupts();
+  // /* 3) 使能机器外部中断 */
+  // vEnableMachineExternalInterrupts();
 
-  /* 4) 初始化 PLIC（使能 CU0 的中断） */
-  vPlicInit();
+  // /* 4) 初始化 PLIC（使能 CU0 的中断） */
+  // vPlicInit(0u, PLIC_IRQ_CU0);
+  // vPlicInit(1u, PLIC_IRQ_CU0);
+  // vPlicInit(2u, PLIC_IRQ_CU0);
+  // vPlicInit(3u, PLIC_IRQ_CU0);
 
   if (xTaskCreate(prvHeartbeatTask, "pulse", configMINIMAL_STACK_SIZE + 128U,
                   NULL, tskIDLE_PRIORITY + 3U, &xHeartbeatHandle) != pdPASS) {

@@ -4,6 +4,7 @@
 
 #include <string.h>
 
+#include "plic_handler.h"
 #include "portmacro.h"
 #include "uart16550.h"
 
@@ -45,6 +46,15 @@ static void vDagEnqueueSuccessors(DagNode* node) {
 static void vDagWorkerTask(void* pvParam) {
   (void)pvParam;
   DagNode* node;
+
+  LOGF("Dag worker started on core %d\n", (uint32_t)portGET_CORE_ID());
+
+  /* 1) 使能机器外部中断 */
+  vEnableMachineExternalInterrupts();
+
+  /* TODO:下面使能位置需要改动 */
+  /* 2) 初始化 PLIC（使能 CU0 的中断） */
+  vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU0);
 
   for (;;) {
     if (xQueueReceive(gDag.readyQ, &node, portMAX_DELAY) == pdTRUE) {

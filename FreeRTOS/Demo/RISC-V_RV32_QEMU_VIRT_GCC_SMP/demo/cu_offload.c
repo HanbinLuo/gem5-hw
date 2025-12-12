@@ -126,6 +126,8 @@ void vCuInit(void) {
 void vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
   configASSERT(cu_id < CU_MAX_COUNT);
 
+  /* TODO:使能对应CU IRQ */
+
   TaskHandle_t self = xTaskGetCurrentTaskHandle();
 
   taskENTER_CRITICAL();
@@ -150,6 +152,8 @@ void vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
 void vCuSubmitDagJob(uint32_t cu_id, uint32_t job_id, struct DagNode* node) {
   configASSERT(cu_id < CU_MAX_COUNT);
   configASSERT(node != NULL);
+
+  /* TODO:使能对应CU IRQ */
 
   taskENTER_CRITICAL();
   configASSERT(gCuSlots[cu_id].waiter == NULL);
