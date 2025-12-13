@@ -9,13 +9,21 @@
 #define SRC_BUF 0x90001000u
 #define DST_BUF 0x90002000u
 
-#define CU_BASE 0x10009000UL
-#define CU_OP_A (CU_BASE + 0x00)
-#define CU_OP_B (CU_BASE + 0x10)
-#define CU_RESULT (CU_BASE + 0x20)
-#define CU_LENGTH (CU_BASE + 0x30)
-#define CU_CONFIG (CU_BASE + 0x31)
-#define CU_STATUS (CU_BASE + 0x32)
+/* CU 基址：支持按 cu_id 偏移（stride）映射多个 CU，间隔为 0x40 */
+#define CU_BASE0 0x10009000UL
+#define CU_STRIDE 0x40UL
+
+static inline uintptr_t cu_base(uint32_t id) {
+  return (uintptr_t)(CU_BASE0 + id * CU_STRIDE);
+}
+
+/* CU 寄存器偏移 */
+#define CU_OP_A_OFF 0x00
+#define CU_OP_B_OFF 0x10
+#define CU_RESULT_OFF 0x20
+#define CU_LENGTH_OFF 0x30
+#define CU_CONFIG_OFF 0x31
+#define CU_STATUS_OFF 0x32
 
 // 简单的 MMIO 读写（8-bit）
 static inline void mmio_write8(uintptr_t addr, uint8_t v) {
@@ -83,14 +91,14 @@ void vCuHwStartJob(uint32_t cu_id, uint32_t job_id) {
 
   uint8_t cfg = 0;  // 0 = add, 1 = sub
 
-  // 写入操作数
-  dma_memcpy((void*)CU_OP_A, src, 16);
-  dma_memcpy((void*)CU_OP_B, src + 16, 16);
+  // 写入操作数（写入到对应 CU 的寄存器地址）
+  dma_memcpy((void*)(cu_base(cu_id) + CU_OP_A_OFF), src, 16);
+  dma_memcpy((void*)(cu_base(cu_id) + CU_OP_B_OFF), src + 16, 16);
   // 写入计算长度
-  mmio_write8(CU_LENGTH, 16);
+  mmio_write8(cu_base(cu_id) + CU_LENGTH_OFF, 16);
   // 触发计算（写 config）
   //   unsigned long long t0 = rdcycle64();
-  mmio_write8(CU_CONFIG, cfg);
+  mmio_write8(cu_base(cu_id) + CU_CONFIG_OFF, cfg);
 
   //   // 轮询 status bit0 == 1
   //   while ((mmio_read8(CU_STATUS) & 0x1) == 0) {
@@ -177,7 +185,7 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
   /* TEST: 读取结果并打印 */
   uint8_t* src = (uint8_t*)SRC_BUF;
   uint8_t* dst = (uint8_t*)DST_BUF;
-  dma_memcpy(dst, (void*)CU_RESULT, 16);
+  dma_memcpy(dst, (void*)(cu_base(cu_id) + CU_RESULT_OFF), 16);
   for (int i = 0; i < 16; i++) {
     LOGF("[%d] %u + %u =%u\n", i, src[i], src[i + 16], dst[i]);
   }

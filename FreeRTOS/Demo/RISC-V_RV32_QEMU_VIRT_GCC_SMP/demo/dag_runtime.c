@@ -55,7 +55,9 @@ static void vDagWorkerTask(void* pvParam) {
   /* TODO:下面使能位置需要改动 */
   /* 2) 初始化 PLIC（使能 CU0 的中断） */
   vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU0);
-
+  vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU1);
+  vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU2);
+  vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU3);
   for (;;) {
     if (xQueueReceive(gDag.readyQ, &node, portMAX_DELAY) == pdTRUE) {
       node->run(node->arg);

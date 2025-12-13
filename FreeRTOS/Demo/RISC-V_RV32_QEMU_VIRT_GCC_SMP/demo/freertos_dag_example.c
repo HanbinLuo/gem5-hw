@@ -42,7 +42,12 @@ typedef struct {
   DagNode* node;
 } CuNodeCtx_t;
 
+/* nodeB 的 CU 上下文：提交到 CU0，job_id = 1 */
 static CuNodeCtx_t gCtxB;
+
+/* nodeC 的 CU 上下文：提交到 CU1，job_id = 2
+ * 现在 nodeC 也是异步节点，与 nodeB 类似地卸载到 CU 执行 */
+static CuNodeCtx_t gCtxC;
 
 static void vCuNodeWork(void* arg) {
   CuNodeCtx_t* ctx = (CuNodeCtx_t*)arg;
@@ -76,9 +81,16 @@ static void vDagInit(void) {
   nodeA.successors = succOfA;
   nodeA.mode = DAG_NODE_SYNC;
 
+  /* 配置 nodeB 提交到 CU0, job_id=1 */
   gCtxB.cu_id = 0U;
   gCtxB.job_id = 1U;
   gCtxB.node = &nodeB;
+
+  /* 配置 nodeC 提交到 CU1, job_id=2
+   * 这样 B 和 C 可以并发地在不同 CU 上执行 */
+  gCtxC.cu_id = 1U;
+  gCtxC.job_id = 2U;
+  gCtxC.node = &nodeC;
 
   nodeB.name = "B";
   nodeB.run = vCuNodeWork;
@@ -88,13 +100,19 @@ static void vDagInit(void) {
   nodeB.successors = succOfB;
   nodeB.mode = DAG_NODE_ASYNC;
 
+  /* nodeC 现在也是异步节点，行为与 nodeB 类似：
+   *  - 提交到 CU1（gCtxC 中配置）
+   *  - 在 run() 中设置 node->async_pending = 1 并调用 vCuSubmitDagJob()
+   *  - CU1 完成后由 PLIC 中断（PLIC_IRQ_CU1）触发 vCuHandleIsr(1, ...)
+   *  - ISR 通过 vDagNotifyAsyncDoneFromISR() 通知 DAG runtime
+   *  - 由 async 任务处理后触发后继节点 D */
   nodeC.name = "C";
-  nodeC.run = vDummyWork;
-  nodeC.arg = (void*)"C";
+  nodeC.run = vCuNodeWork;   /* 异步提交到 CU1 */
+  nodeC.arg = (void*)&gCtxC;
   nodeC.indegree = 1U;
   nodeC.numSuccessors = 1U;
   nodeC.successors = succOfC;
-  nodeC.mode = DAG_NODE_SYNC;
+  nodeC.mode = DAG_NODE_ASYNC;
 
   nodeD.name = "D";
   nodeD.run = vDummyWork;

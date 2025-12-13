@@ -9,7 +9,7 @@
 
 struct DagNode;
 
-#define CU_MAX_COUNT  1  /* 现在只用 1 个 CU，将来可以扩展 */
+#define CU_MAX_COUNT  4  /* 现在只用 4 个 CU，将来可以扩展 */
 
 typedef struct {
     TaskHandle_t waiter;

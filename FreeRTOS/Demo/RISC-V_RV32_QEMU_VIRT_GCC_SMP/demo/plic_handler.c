@@ -72,12 +72,38 @@ BaseType_t xPortHandleExternalInterrupt(uint32_t ulMcause, uint32_t ulMepc) {
   //   vPlicDeinit(2u, PLIC_IRQ_CU0);
   //   vPlicDeinit(3u, PLIC_IRQ_CU0);
 
-  /* TODO:建立CU和IRQ的映射关系 */
-  if (claim == PLIC_IRQ_CU0) {
-    /* 把 “CU0 完成” 这个事件交给 CU/DAG 桥接层 */
-    vCuHandleIsr(0u, &xHigherPriorityTaskWoken);
+  /*
+   * ========== 多 CU 中断处理说明 ==========
+   *
+   * 1. PLIC IRQ 与 CU 的映射关系（定义在 plic_handler.h）：
+   *    - PLIC_IRQ_CU0 = 11  ->  CU0 完成中断
+   *    - PLIC_IRQ_CU1 = 12  ->  CU1 完成中断
+   *    - PLIC_IRQ_CU2 = 13  ->  CU2 完成中断
+   *    - PLIC_IRQ_CU3 = 14  ->  CU3 完成中断
+   *
+   * 2. 中断初始化（在 dag_runtime.c 的 vDagWorkerTask 中）：
+   *    每个 worker 启动时为当前 hart 使能所有 CU 的 PLIC 中断：
+   *      vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU0);
+   *      vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU1);
+   *      ...
+   *
+   * 3. 中断处理流程：
+   *    a) 读取 PLIC claim 寄存器获取中断源号
+   *    b) 完成 claim（写回 claim 寄存器）
+   *    c) 根据 claim 计算 cu_id = claim - PLIC_IRQ_CU0
+   *    d) 调用 vCuHandleIsr(cu_id, ...) 处理对应 CU 的完成事件
+   *
+   * 4. 并发支持：
+   *    - 多个 CU 可同时运行（如 CU0 执行 nodeB，CU1 执行 nodeC）
+   *    - 各自完成时触发各自的 PLIC 中断（IRQ 11, 12, ...）
+   *    - ISR 会正确路由到对应的 gCuSlots[cu_id] 并通知等待者
+   */
+  if (claim >= PLIC_IRQ_CU0 && claim <= PLIC_IRQ_CU3) {
+    /* 将 PLIC claim 映射为 cu_id（假定 CU IRQ 号连续分配） */
+    uint32_t cu_id = claim - PLIC_IRQ_CU0;
+    /* 调用 CU/DAG 桥接层处理该 CU 的完成事件 */
+    vCuHandleIsr(cu_id, &xHigherPriorityTaskWoken);
   }
-
   return xHigherPriorityTaskWoken;
 }
 
