@@ -33,6 +33,7 @@ class ComputeUnit : public PlicIntDevice
     uint8_t length{1};    // offset 0x30
     uint8_t config{0};    // offset 0x31 (bit0: 0=add, 1=sub)
     uint8_t status{0};    // offset 0x32 (bit0 = done)
+    uint8_t busy{0};      // offset 0x33 (bit0: 0=idle, 1=computing)
 
     // Latency for the computation operation
     const Tick computeDelay;
