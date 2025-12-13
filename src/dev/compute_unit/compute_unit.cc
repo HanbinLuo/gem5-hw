@@ -65,6 +65,11 @@ ComputeUnit::read(PacketPtr pkt)
                 val = config;
             else if (off == 50)
                 val = status & 0x1;
+<<<<<<< HEAD
+=======
+            else if (off == 51)
+                val = busy & 0x1;
+>>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
             else
                 val = 0;
             buf[i] = val;
@@ -92,6 +97,11 @@ ComputeUnit::read(PacketPtr pkt)
             val = config;
         else if (offset == 50)
             val = status & 0x1;
+<<<<<<< HEAD
+=======
+        else if (offset == 51)
+            val = busy & 0x1;
+>>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
         else
             val = 0;
         pkt->setLE<uint8_t>(val);
@@ -112,6 +122,11 @@ ComputeUnit::read(PacketPtr pkt)
                 val = config;
             else if (off == 50)
                 val = status & 0x1;
+<<<<<<< HEAD
+=======
+            else if (off == 51)
+                val = busy & 0x1;
+>>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
             else
                 val = 0;
             buf[i] = val;
@@ -167,8 +182,14 @@ ComputeUnit::write(PacketPtr pkt)
         } else if (off == 49) {
             config = v;
             // trigger computation on config write:
+<<<<<<< HEAD
             //  clear done, schedule compute
             status &= ~0x1; // clear done bit
+=======
+            //  clear done, set busy, schedule compute
+            status &= ~0x1; // clear done bit
+            busy = 1;       // set busy bit immediately
+>>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
             {//计划实现根据配置长度启动计算延迟
                 Tick when = curTick() + computeDelay;
                 if (!sys->isAtomicMode()) {
@@ -218,8 +239,14 @@ ComputeUnit::completeOperation()
         }
     }
 
+<<<<<<< HEAD
     // set done flag
     status |= 0x1;
+=======
+    // set done flag, clear busy flag
+    status |= 0x1;
+    busy = 0;  // clear busy bit when computation completes
+>>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
 
     // notify (if bus wants to detect changes, this could be extended)
 
