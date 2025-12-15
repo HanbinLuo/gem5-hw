@@ -66,11 +66,10 @@ BaseType_t xPortHandleExternalInterrupt(uint32_t ulMcause, uint32_t ulMepc) {
     plic_mmio_write32(plic_claim_addr(portGET_CORE_ID()), claim);
   }
 
-  /* TODO:去使能对应的CU IRQ */
-  //   vPlicDeinit(0u, PLIC_IRQ_CU0);
-  //   vPlicDeinit(1u, PLIC_IRQ_CU0);
-  //   vPlicDeinit(2u, PLIC_IRQ_CU0);
-  //   vPlicDeinit(3u, PLIC_IRQ_CU0);
+  /* 去使能对应的CU IRQ */
+  for (int i = 0; i < configNUMBER_OF_CORES; ++i) {
+    vPlicDeinit(i, claim);
+  }
 
   /*
    * ========== 多 CU 中断处理说明 ==========

@@ -3,6 +3,7 @@
 #include "cu_offload.h"
 
 #include "dag_runtime.h"
+#include "plic_handler.h"
 #include "uart16550.h"
 
 /* 假设 DRAM 起始 0x80000000，这里随便两个 buffer */
@@ -134,16 +135,21 @@ void vCuInit(void) {
 void vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
   configASSERT(cu_id < CU_MAX_COUNT);
 
-  /* TODO:使能对应CU IRQ */
-
   TaskHandle_t self = xTaskGetCurrentTaskHandle();
 
   taskENTER_CRITICAL();
+
+  /* 使能对应CU IRQ */
+  for (int i = 0; i < configNUMBER_OF_CORES; ++i) {
+    vPlicInit(i, PLIC_IRQ_CU0 + cu_id);
+  }
+
   /* 当前设计：每个 CU 同一时间只允许 1 个 inflight 任务 */
   configASSERT(gCuSlots[cu_id].waiter == NULL);
   configASSERT(gCuSlots[cu_id].dag_node == NULL);
   gCuSlots[cu_id].waiter = self;
   gCuSlots[cu_id].job_id = job_id;
+
   taskEXIT_CRITICAL();
 
   /* 真正启动 CU + DMA */
@@ -161,9 +167,13 @@ void vCuSubmitDagJob(uint32_t cu_id, uint32_t job_id, struct DagNode* node) {
   configASSERT(cu_id < CU_MAX_COUNT);
   configASSERT(node != NULL);
 
-  /* TODO:使能对应CU IRQ */
-
   taskENTER_CRITICAL();
+
+  /* 使能对应CU IRQ */
+  for (int i = 0; i < configNUMBER_OF_CORES; ++i) {
+    vPlicInit(i, PLIC_IRQ_CU0 + cu_id);
+  }
+
   configASSERT(gCuSlots[cu_id].waiter == NULL);
   configASSERT(gCuSlots[cu_id].dag_node == NULL);
   gCuSlots[cu_id].dag_node = node;
