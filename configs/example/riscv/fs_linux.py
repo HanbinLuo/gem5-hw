@@ -215,10 +215,6 @@ system.membus = MemBus()
 system.system_port = system.membus.cpu_side_ports
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
 # HiFive Platform
 system.platform = HiFive()
 
@@ -228,35 +224,19 @@ system.platform.clint.int_pin = system.platform.rtc.int_pin
 system.platform.pci_host.pio = system.iobus.mem_side_ports
 
 # ---------------------------- Simple DMA --------------------------- #
-<<<<<<< HEAD
-system.platform.simple_dma = SimpleDMA(
-    pio_addr = 0x50000000,
-    pio_size = 0x1000
-)
-=======
 system.platform.simple_dma = SimpleDMA(pio_addr=0x50000000, pio_size=0x1000)
->>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
 # 连接 dma 端口到 membus
 system.platform.simple_dma.dma = system.membus.cpu_side_ports
 
 # ---------------------------- Compute Unit --------------------------- #
-<<<<<<< HEAD
-system.platform.compute_unit = ComputeUnit(
-    pio_addr=0x10009000,  
-    pio_size=0x40,  
-    pio_latency="10ns",  
-=======
 system.platform.compute_unit_0 = ComputeUnit(
     pio_addr=0x10009000,
     pio_size=0x40,
     pio_latency="10ns",
->>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
     compute_latency="1ms",
     interrupt_id=0xB,
 )
 
-<<<<<<< HEAD
-=======
 system.platform.compute_unit_1 = ComputeUnit(
     pio_addr=0x10009040,
     pio_size=0x40,
@@ -280,7 +260,6 @@ system.platform.compute_unit_3 = ComputeUnit(
     compute_latency="1ms",
     interrupt_id=0xE,
 )
->>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
 
 # VirtIOMMIO
 if args.disk_image:
@@ -387,15 +366,9 @@ uncacheable_range = [
     # # Bare-Metal RAM Region: 0x80000000(16M)
     # AddrRange(0x80000000, size=0x1000000),
     # # DMA buffer 区域: 0x80001000~0x80002FFF
-<<<<<<< HEAD
-    # AddrRange(0x80001000, size=0x2000), 
-    # RAM区域范围
-    *system.mem_ranges, 
-=======
     # AddrRange(0x80001000, size=0x2000),
     # RAM区域范围
     *system.mem_ranges,
->>>>>>> 1fbbaed47c3f936226c0a0c97cbaeb8f8647b401
 ]
 
 # PMA checker can be defined at system-level (system.pma_checker)
