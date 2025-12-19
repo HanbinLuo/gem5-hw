@@ -19,4 +19,7 @@ class ComputeUnit(PlicIntDevice):
         True, "Print transmitted bytes to host stdout"
     )
 
-    compute_latency = Param.Latency("100ns", "Time taken for computation")
+    # compute_latency removed: compute delay comes from device register at runtime
+    # Compute unit identifier (configurable from top-level Python)
+    cu_id = Param.UInt32(0, "Compute Unit ID")
+    # interrupt_id is provided via PlicIntDevice/Params (ensure top-level config sets this)

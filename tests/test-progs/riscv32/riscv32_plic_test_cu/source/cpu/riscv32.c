@@ -59,42 +59,12 @@ u32 handle_trap(u32 mcause, u32 mepc)
 
 void handle_external_trap(void)
 {
-	int irq = plic_claim();
-	if (irq == UART0_IRQ) {
-		UartIsr();
-        } else if (irq == DMA_IRQ) {
-        // DMA 中断处理
-        if (g_work_state == STATE_DMA_IN_PROGRESS) {
-            printf("[ISR] DMA In Done -> Start Compute\n");
-            // 启动计算
-            mmio_write8(CU_LENGTH, 16);
-            mmio_write8(CU_CONFIG, 0); // 0 = add
-            g_work_state = STATE_COMPUTING;
-        } else if (g_work_state == STATE_DMA_OUT_PROGRESS) {
-            printf("[ISR] DMA Out Done -> All Finished\n");
-            g_work_state = STATE_DONE;
-        } else {
-            printf("[ISR] Unexpected DMA IRQ in state %d\n", g_work_state);
-        }
-        // 清除 DMA 中断状态（如果硬件需要，这里 SimpleDMA 只要写 0x10 即可清除 done）
-        // 但 SimpleDMA 的 done 是只读的吗？看代码 write 0x10 可以清除 done
-        simple_dma_regs_t * const dma = (simple_dma_regs_t *)DMA_BASE;
-        dma->STATUS = 1; // Clear done bit
-    } else if (irq == MY_COMPUTE_IRQ) {
-        // 计算单元中断处理
-                printf("[ISR] Compute Done -> Start DMA Out\n");
-        if (g_work_state == STATE_COMPUTING) {
-            // 启动 DMA 回写: CU_RESULT -> DST_BUF
-            dma_start_async(CU_RESULT, DST_BUF, 16);
-            g_work_state = STATE_DMA_OUT_PROGRESS;
-        } else {
-             printf("[ISR] Unexpected Compute IRQ "
-            "in state %d\n", g_work_state);
-        }
-        } else {
-                printf("unknow external isr: %d\n", irq);
-        }
-
-	if(irq)
-      plic_complete(irq);
+    int irq = plic_claim();
+    if (irq) {
+        // 简化处理中断：只打印发生了哪个中断，然后完成它
+        // printf("[ISR] External IRQ %d received\n", irq);
+        plic_complete(irq);
+    } else {
+        // printf("[ISR] External IRQ claim returned 0\n");
+    }
 }

@@ -15,11 +15,17 @@
 namespace gem5 {
 
 ComputeUnit::ComputeUnit(const Params &p)
-    : PlicIntDevice(p), computeDelay(p.compute_latency), computeEvent(*this)
+    : PlicIntDevice(p), computeEvent(*this)
 {
-    std::memset(op_a, 0, sizeof(op_a));
-    std::memset(op_b, 0, sizeof(op_b));
-    std::memset(result, 0, sizeof(result));
+    // no per-element operand/result arrays anymore
+    // initialize 32-bit registers from params where appropriate
+    cu_id_reg = p.cu_id;
+    job_id_reg = 0;
+    compute_size_reg = 0;
+    compute_delay_reg = 0;
+    config = 0;
+    status = 0;
+    busy = 0;
 }
 
 Tick
@@ -46,80 +52,86 @@ ComputeUnit::read(PacketPtr pkt)
         return pioDelay;
     }
 
-    // If this is an atomic swap, populate packet buffer with current data,
-    // invoke the atomic op to modify the buffer, then forward to write()
+    // Implement read behavior for new register layout
     if (is_atomic) {
         uint8_t *buf = pkt->getPtr<uint8_t>();
         for (unsigned i = 0; i < pkt->getSize(); ++i) {
             Addr off = offset + i;
             uint8_t val = 0;
-            if (off < 16)
-                val = op_a[off];
-            else if (off < 32)
-                val = op_b[off - 16];
-            else if (off < 48)
-                val = result[off - 32];
-            else if (off == 48)
-                val = length;
-            else if (off == 49)
+            if (off <= 0x03) {
+                unsigned byte = off - 0x00;
+                val = (cu_id_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x04 && off <= 0x07) {
+                unsigned byte = off - 0x04;
+                val = (job_id_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x08 && off <= 0x0B) {
+                unsigned byte = off - 0x08;
+                val = (compute_size_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x0C && off <= 0x0F) {
+                unsigned byte = off - 0x0C;
+                val = (compute_delay_reg >> (8 * byte)) & 0xFF;
+            } else if (off == 0x10) {
                 val = config;
-            else if (off == 50)
+            } else if (off == 0x11) {
                 val = status & 0x1;
-            else if (off == 51)
+            } else if (off == 0x12) {
                 val = busy & 0x1;
-            else
-                val = 0;
+            }
             buf[i] = val;
         }
 
-        // Apply the atomic operation provided by the packet
-        (*(pkt->getAtomicOp()))(buf);
-
-        // Now let write() handle storing the modified buffer back into regs
+        // Apply the atomic operation provided by the packet then forward to write()
+        (*(pkt->getAtomicOp()))(pkt->getPtr<uint8_t>());
         return write(pkt);
     }
 
-    // Non-atomic/timing read: fill packet buffer or set LE value for size==1
+    // Non-atomic/timing read: single-byte or multi-byte
     if (pkt->getSize() == 1) {
         uint8_t val = 0;
-        if (offset < 16)
-            val = op_a[offset];
-        else if (offset < 32)
-            val = op_b[offset - 16];
-        else if (offset < 48)
-            val = result[offset - 32];
-        else if (offset == 48)
-            val = length;
-        else if (offset == 49)
+        if (offset <= 0x03) {
+            unsigned byte = offset - 0x00;
+            val = (cu_id_reg >> (8 * byte)) & 0xFF;
+        } else if (offset >= 0x04 && offset <= 0x07) {
+            unsigned byte = offset - 0x04;
+            val = (job_id_reg >> (8 * byte)) & 0xFF;
+        } else if (offset >= 0x08 && offset <= 0x0B) {
+            unsigned byte = offset - 0x08;
+            val = (compute_size_reg >> (8 * byte)) & 0xFF;
+        } else if (offset >= 0x0C && offset <= 0x0F) {
+            unsigned byte = offset - 0x0C;
+            val = (compute_delay_reg >> (8 * byte)) & 0xFF;
+        } else if (offset == 0x10) {
             val = config;
-        else if (offset == 50)
+        } else if (offset == 0x11) {
             val = status & 0x1;
-        else if (offset == 51)
+        } else if (offset == 0x12) {
             val = busy & 0x1;
-        else
-            val = 0;
+        }
         pkt->setLE<uint8_t>(val);
     } else {
         uint8_t *buf = pkt->getPtr<uint8_t>();
         for (unsigned i = 0; i < pkt->getSize(); ++i) {
             Addr off = offset + i;
             uint8_t val = 0;
-            if (off < 16)
-                val = op_a[off];
-            else if (off < 32)
-                val = op_b[off - 16];
-            else if (off < 48)
-                val = result[off - 32];
-            else if (off == 48)
-                val = length;
-            else if (off == 49)
+            if (off <= 0x03) {
+                unsigned byte = off - 0x00;
+                val = (cu_id_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x04 && off <= 0x07) {
+                unsigned byte = off - 0x04;
+                val = (job_id_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x08 && off <= 0x0B) {
+                unsigned byte = off - 0x08;
+                val = (compute_size_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x0C && off <= 0x0F) {
+                unsigned byte = off - 0x0C;
+                val = (compute_delay_reg >> (8 * byte)) & 0xFF;
+            } else if (off == 0x10) {
                 val = config;
-            else if (off == 50)
+            } else if (off == 0x11) {
                 val = status & 0x1;
-            else if (off == 51)
+            } else if (off == 0x12) {
                 val = busy & 0x1;
-            else
-                val = 0;
+            }
             buf[i] = val;
         }
     }
@@ -162,37 +174,52 @@ ComputeUnit::write(PacketPtr pkt)
     for (unsigned i = 0; i < pkt->getSize(); ++i) {
         Addr off = offset + i;
         uint8_t v = buf[i];
-        if (off < 16) {
-            op_a[off] = v;
-        } else if (off < 32) {
-            op_b[off - 16] = v;
-        } else if (off < 48) {
-            // result is read-only; ignore writes
-        } else if (off == 48) {
-            length = v;
-        } else if (off == 49) {
+        // write bytes into 32-bit registers or control bytes
+        if (off <= 0x03) {
+            unsigned byte = off - 0x00;
+            uint32_t mask = uint32_t(0xFF) << (8 * byte);
+            cu_id_reg = (cu_id_reg & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off >= 0x04 && off <= 0x07) {
+            unsigned byte = off - 0x04;
+            uint32_t mask = uint32_t(0xFF) << (8 * byte);
+            job_id_reg = (job_id_reg & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off >= 0x08 && off <= 0x0B) {
+            unsigned byte = off - 0x08;
+            uint32_t mask = uint32_t(0xFF) << (8 * byte);
+            compute_size_reg = (compute_size_reg & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off >= 0x0C && off <= 0x0F) {
+            unsigned byte = off - 0x0C;
+            uint32_t mask = uint32_t(0xFF) << (8 * byte);
+            compute_delay_reg = (compute_delay_reg & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off == 0x10) {
+            // config write: start computation when written
             config = v;
-            // trigger computation on config write:
-            //  clear done, set busy, schedule compute
-            status &= ~0x1; // clear done bit
-            busy = 1;       // set busy bit immediately
-            {//计划实现根据配置长度启动计算延迟
-                Tick when = curTick() + computeDelay;
-                if (!sys->isAtomicMode()) {
-                    when += pioDelay;
-                }
-                schedule(&computeEvent, when);
-            }
-        } else if (off == 50) {
+            status &= ~0x1; // clear done
+            busy = 1;
+
+            // compute delay: use compute_delay_reg (interpreted as ticks). pioDelay is NOT added.
+            Tick delayTicks = Tick(compute_delay_reg);
+            Tick when = curTick() + delayTicks;
+
+            std::cout << "ComputeUnit: Starting compute\n";
+            std::cout << "  CU_ID=" << cu_id_reg << " JOB_ID=" << job_id_reg
+                      << " SIZE=" << compute_size_reg << " CONFIG=0x" << std::hex << int(config) << std::dec
+                      << " ADDR=0x" << std::hex << pioAddr << std::dec
+                      << " DELAY=" << compute_delay_reg << " ticks (" << (compute_delay_reg / 500) << " cycles)\n";
+
+            schedule(&computeEvent, when);
+        } else if (off == 0x11) {
             // allow clearing the done bit by writing 0
             if ((v & 0x1) == 0) {
                 status &= ~0x1;
-                // 如果正在向 PLIC 清除中断，也同时通知平台
                 if (platform) {
                     DPRINTF(ComputeUnit, "Clearing PLIC interrupt id %d\n", _interruptID);
                     platform->clearPciInt(_interruptID);
                 }
             }
+        } else if (off == 0x12) {
+            // Writes to busy can be used to clear or set; here accept write to clear
+            busy = v & 0x1;
         }
     }
 
@@ -210,40 +237,24 @@ ComputeUnit::write(PacketPtr pkt)
 void
 ComputeUnit::completeOperation()
 {
-    // perform operation based on config bit0
-    // Limit length to 16
-    uint8_t len = (length > 16) ? 16 : length;
-    if (len == 0) len = 1; // Default to 1 if 0? Or just do nothing? Let's assume at least 1.
-
-    for (int i = 0; i < len; ++i) {
-        if ((config & 0x1) == 0) {
-            // add
-            result[i] = static_cast<uint8_t>(op_a[i] + op_b[i]);
-        } else {
-            // sub
-            result[i] = static_cast<uint8_t>(op_a[i] - op_b[i]);
-        }
-    }
 
     // set done flag, clear busy flag
     status |= 0x1;
-    busy = 0;  // clear busy bit when computation completes
+    busy = 0;
 
-    // notify (if bus wants to detect changes, this could be extended)
-
-    std::cout << "ComputeUnit: Compute complete (len=" << unsigned(len) << ")\n";
-    for (int i = 0; i < len; ++i) {
-        std::cout << "  [" << i << "]: " << unsigned(op_a[i])
-                  << ( (config & 0x1) ? " - " : " + " ) << unsigned(op_b[i])
-                  << " = " << unsigned(result[i]) << "\n";
-    }
-    std::cout << "Address: 0x" << std::hex << pioAddr << std::dec
-              << ", Range: " << pioSize
-              << ", Delay: " << pioDelay
-              << ", Compute Delay: " << computeDelay << std::endl;
-    //CPU 时钟周期是 500 ticks，除以 500 得到周期数
-    std::cout << "Delay cycles: " << (pioDelay / 500) << std::endl;
-    std::cout << "Compute Delay cycles: " << (computeDelay / 500) << std::endl;
+    // print register values (no per-element arithmetic anymore)
+    std::cout << "ComputeUnit: Compute complete\n";
+    std::cout << "  CU_ID=" << cu_id_reg << " JOB_ID=" << job_id_reg
+              << " SIZE=" << compute_size_reg << " CONFIG=0x" << std::hex << int(config) << std::dec
+              << " ADDR=0x" << std::hex << pioAddr << std::dec
+              << " DELAY=" << compute_delay_reg << " ticks (" << (compute_delay_reg / 500) << " cycles)\n";
+    // std::cout << "Address: 0x" << std::hex << pioAddr << std::dec
+    //           << ", Range: " << pioSize
+    //           << ", pioDelay: " << pioDelay
+    //           << ", compute_delay_reg: " << compute_delay_reg << std::endl;
+    // CPU 时钟周期是 500 ticks，除以 500 得到周期数
+    // std::cout << "pioDelay cycles: " << (pioDelay / 500) << std::endl;
+    // std::cout << "compute_delay_reg cycles: " << (compute_delay_reg / 500) << std::endl;
     // 触发 PLIC 中断，通知处理器：计算单元完成
     if (platform) {
         DPRINTF(ComputeUnit, "Posting PLIC interrupt id %d\n", _interruptID);

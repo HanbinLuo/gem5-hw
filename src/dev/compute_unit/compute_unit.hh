@@ -26,17 +26,26 @@ class ComputeUnit : public PlicIntDevice
 
   private:
     // use pioAddr/pioSize/pioDelay from BasicPioDevice
-    // Compute unit registers
-    uint8_t op_a[16];     // offset 0x00 - 0x0F
-    uint8_t op_b[16];     // offset 0x10 - 0x1F
-    uint8_t result[16];   // offset 0x20 - 0x2F
-    uint8_t length{1};    // offset 0x30
-    uint8_t config{0};    // offset 0x31 (bit0: 0=add, 1=sub)
-    uint8_t status{0};    // offset 0x32 (bit0 = done)
-    uint8_t busy{0};      // offset 0x33 (bit0: 0=idle, 1=computing)
+    // New register layout (all offsets are device PIO offsets, little-endian):
+    // 0x00-0x03 : cu_id_reg (32-bit) - configurable from Python
+    // 0x04-0x07 : job_id_reg (32-bit)
+    // 0x08-0x0B : compute_size_reg (32-bit) -- number of items to compute
+    // 0x0C-0x0F : compute_delay_reg (32-bit ticks) -- overrides device param when non-zero
+    // 0x10      : config (8-bit, bit0: 0=add, 1=sub)
+    // 0x11      : status (8-bit, bit0 = done)
+    // 0x12      : busy   (8-bit, bit0: 0=idle, 1=computing)
 
-    // Latency for the computation operation
-    const Tick computeDelay;
+    uint32_t cu_id_reg{0};
+    uint32_t job_id_reg{0};
+    uint32_t compute_size_reg{0};
+    uint32_t compute_delay_reg{0};
+    uint8_t config{0};    // offset 0x10
+    uint8_t status{0};    // offset 0x11
+    uint8_t busy{0};      // offset 0x12
+
+    // computeDelay param removed: computation delay is read from `compute_delay_reg` at runtime
+    // (keep member for compatibility with existing constructors but set to 0)
+    const Tick computeDelay{0};
 
     // Event to model compute delay
     MemberEventWrapper<&ComputeUnit::completeOperation> computeEvent;
