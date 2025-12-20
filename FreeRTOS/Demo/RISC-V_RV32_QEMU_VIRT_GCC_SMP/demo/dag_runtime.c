@@ -16,6 +16,8 @@ typedef struct {
   QueueHandle_t asyncDoneQ;
   TaskHandle_t workers[DAG_MAX_WORKERS];
   TaskHandle_t asyncTask;
+  uint32_t tempBytes;
+  uint32_t tempPeakBytes;
 } DagRuntimeState_t;
 
 static DagRuntimeState_t gDag;
@@ -31,6 +33,82 @@ static inline uint32_t dag_atomic_dec(uint32_t* pValue) {
   return newVal;
 }
 
+static void vDagTempAlloc(uint32_t sizeBytes) {
+  taskENTER_CRITICAL();
+  gDag.tempBytes += sizeBytes;
+  if (gDag.tempBytes > gDag.tempPeakBytes) {
+    gDag.tempPeakBytes = gDag.tempBytes;
+  }
+  taskEXIT_CRITICAL();
+  LOGF("TempMem alloc %u bytes, current=%u, peak=%u\n", sizeBytes,
+       gDag.tempBytes, gDag.tempPeakBytes);
+}
+
+static void vDagTempFree(uint32_t sizeBytes) {
+  taskENTER_CRITICAL();
+  if (gDag.tempBytes >= sizeBytes) {
+    gDag.tempBytes -= sizeBytes;
+  } else {
+    gDag.tempBytes = 0U;
+  }
+  taskEXIT_CRITICAL();
+  LOGF("TempMem free %u bytes, current=%u, peak=%u\n", sizeBytes,
+       gDag.tempBytes, gDag.tempPeakBytes);
+}
+
+static void vDagProduceOutputs(DagNode* node) {
+  for (uint32_t i = 0; i < node->numOutputs; i++) {
+    DagData* data = node->outputs[i];
+    if (data == NULL) {
+      continue;
+    }
+    data->remaining_consumers = data->consumers;
+    if (data->sizeBytes == 0U || data->consumers == 0U) {
+      continue;
+    }
+    if (data->buffer == NULL) {
+      data->buffer = pvPortMalloc(data->sizeBytes);
+      configASSERT(data->buffer != NULL);
+      vDagTempAlloc(data->sizeBytes);
+    }
+  }
+}
+
+void vDagPrepareAsyncOutputs(DagNode* node) {
+  for (uint32_t i = 0; i < node->numOutputs; i++) {
+    DagData* data = node->outputs[i];
+    if (data == NULL) {
+      continue;
+    }
+    if (data->sizeBytes == 0U || data->consumers == 0U) {
+      continue;
+    }
+    if (data->buffer == NULL) {
+      data->buffer = pvPortMalloc(data->sizeBytes);
+      configASSERT(data->buffer != NULL);
+      vDagTempAlloc(data->sizeBytes);
+    }
+  }
+}
+
+static void vDagReleaseInputs(DagNode* node) {
+  for (uint32_t i = 0; i < node->numInputs; i++) {
+    DagData* data = node->inputs[i];
+    if (data == NULL || data->buffer == NULL) {
+      continue;
+    }
+    if (data->remaining_consumers == 0U) {
+      continue;
+    }
+    uint32_t remaining = dag_atomic_dec(&data->remaining_consumers);
+    if (remaining == 0U) {
+      vPortFree(data->buffer);
+      data->buffer = NULL;
+      vDagTempFree(data->sizeBytes);
+    }
+  }
+}
+
 static void vDagEnqueueSuccessors(DagNode* node) {
   for (uint32_t i = 0; i < node->numSuccessors; i++) {
     DagNode* succ = node->successors[i];
@@ -41,6 +119,12 @@ static void vDagEnqueueSuccessors(DagNode* node) {
       xQueueSend(gDag.readyQ, &ready, portMAX_DELAY);
     }
   }
+}
+
+static void vDagFinalizeNode(DagNode* node) {
+  vDagProduceOutputs(node);
+  vDagReleaseInputs(node);
+  vDagEnqueueSuccessors(node);
 }
 
 static void vDagWorkerTask(void* pvParam) {
@@ -57,7 +141,7 @@ static void vDagWorkerTask(void* pvParam) {
       node->run(node->arg);
 
       if (node->mode == DAG_NODE_SYNC) {
-        vDagEnqueueSuccessors(node);
+        vDagFinalizeNode(node);
       }
     }
   }
@@ -74,7 +158,7 @@ static void vDagAsyncCompleteTask(void* pvParam) {
       //                 (uint32_t)portGET_CORE_ID());
       LOGF("Node %s done on core %d\n", node->name,
            (uint32_t)portGET_CORE_ID());
-      vDagEnqueueSuccessors(node);
+      vDagFinalizeNode(node);
     }
   }
 }
@@ -121,4 +205,20 @@ void vDagNotifyAsyncDoneFromISR(DagNode* node,
   configASSERT(node != NULL);
   node->async_pending = 0U;
   xQueueSendFromISR(gDag.asyncDoneQ, &node, pxHigherPriorityTaskWoken);
+}
+
+uint32_t ulDagGetTempBytes(void) {
+  uint32_t value;
+  taskENTER_CRITICAL();
+  value = gDag.tempBytes;
+  taskEXIT_CRITICAL();
+  return value;
+}
+
+uint32_t ulDagGetTempPeakBytes(void) {
+  uint32_t value;
+  taskENTER_CRITICAL();
+  value = gDag.tempPeakBytes;
+  taskEXIT_CRITICAL();
+  return value;
 }

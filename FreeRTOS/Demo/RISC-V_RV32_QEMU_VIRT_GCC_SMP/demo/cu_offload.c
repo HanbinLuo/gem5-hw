@@ -2,40 +2,11 @@
 
 #include "cu_offload.h"
 
+#include <string.h>
+
 #include "dag_runtime.h"
 #include "plic_handler.h"
 #include "uart16550.h"
-
-/* 假设 DRAM 起始 0x80000000，这里随便两个 buffer */
-#define SRC_BUF 0x90001000u
-#define DST_BUF 0x90002000u
-
-/* CU 基址：支持按 cu_id 偏移（stride）映射多个 CU，间隔为 0x40 */
-#define CU_BASE0 0x10009000UL
-#define CU_STRIDE 0x40UL
-
-static inline uintptr_t cu_base(uint32_t id) {
-  return (uintptr_t)(CU_BASE0 + id * CU_STRIDE);
-}
-
-/* CU 寄存器偏移 */
-#define CU_OP_A_OFF 0x00
-#define CU_OP_B_OFF 0x10
-#define CU_RESULT_OFF 0x20
-#define CU_LENGTH_OFF 0x30
-#define CU_CONFIG_OFF 0x31
-#define CU_STATUS_OFF 0x32
-
-// 简单的 MMIO 读写（8-bit）
-static inline void mmio_write8(uintptr_t addr, uint8_t v) {
-  volatile uint8_t* p = (volatile uint8_t*)addr;
-  *p = v;
-}
-
-static inline uint8_t mmio_read8(uintptr_t addr) {
-  volatile uint8_t* p = (volatile uint8_t*)addr;
-  return *p;
-}
 
 // 读 RISC-V mcycle（裸机运行在 machine/privileged 模式），用于测周期数
 static inline unsigned long long rdcycle64(void) {
@@ -60,9 +31,13 @@ typedef struct {
 
 static simple_dma_regs_t* const dma = (simple_dma_regs_t*)DMA_BASE;
 
-/* 假设 DRAM 起始 0x80000000，这里随便两个 buffer */
-#define SRC_BUF 0x90001000u
-#define DST_BUF 0x90002000u
+static uint32_t lcg_next(uint32_t v) { return v * 1664525u + 1013904223u; }
+
+static BaseType_t vCuIsHwIdle(uint32_t id) {
+  uint8_t busy = mmio_read8(cu_base(id) + CU_BUSY_OFF);
+  /* busy register bit0 == 0 表示空闲 */
+  return (busy & 0x1u) == 0u;
+}
 
 static void dma_memcpy(void* dst, const void* src, uint32_t len) {
   /* 清 DONE 标志 */
@@ -79,27 +54,51 @@ static void dma_memcpy(void* dst, const void* src, uint32_t len) {
   }
 }
 
-void vCuHwStartJob(uint32_t cu_id, uint32_t job_id) {
-  uint8_t* src = (uint8_t*)SRC_BUF;
-  uint8_t* dst = (uint8_t*)DST_BUF;
-  const uint32_t len = 256;
+static uintptr_t cu_output_src_addr(uint32_t cu_id, uint32_t index) {
+  return (uintptr_t)(cu_base(cu_id) + CU_OUTPUT_ADDR0_OFF +
+                     index * CU_OUTPUT_STRIDE);
+}
 
-  /* 初始化 src，dst 先清零 */
-  for (uint32_t i = 0; i < len; ++i) {
-    src[i] = (uint8_t)(i & 0xFF);
-    dst[i] = 0;
+void vCuHwStartJob(uint32_t cu_id, uint32_t job_id, const CuSlot_t* job_info) {
+  const CuSlot_t* job_slot = job_info;
+  const uint32_t numInputs = (job_slot != NULL) ? job_slot->job.numInputs : 0U;
+  const uint32_t numOutputs =
+      (job_slot != NULL) ? job_slot->job.numOutputs : 0U;
+
+  (void)job_id;
+
+  /* TODO: 以下寄存器映射为占位，需与 CU/DMA 真实映射对齐 */
+  // for (uint32_t i = 0; i < numInputs; i++) {
+  //   mmio_write32(cu_base(cu_id) + CU_INPUT_ADDR0_OFF + i * CU_INPUT_STRIDE,
+  //                (uint32_t)job_slot->job.inputAddrs[i]);
+  //   mmio_write32(cu_base(cu_id) + CU_INPUT_SIZE0_OFF + i * CU_INPUT_STRIDE,
+  //                job_slot->job.inputSizes[i]);
+  // }
+
+  // for (uint32_t i = 0; i < numOutputs; i++) {
+  //   mmio_write32(cu_base(cu_id) + CU_OUTPUT_ADDR0_OFF + i * CU_OUTPUT_STRIDE,
+  //                (uint32_t)job_slot->job.outputAddrs[i]);
+  //   mmio_write32(cu_base(cu_id) + CU_OUTPUT_SIZE0_OFF + i * CU_OUTPUT_STRIDE,
+  //                job_slot->job.outputSizes[i]);
+  // }
+
+  if (job_slot != NULL) {
+    mmio_write32(cu_base(cu_id) + CU_JOB_OFF, job_id);
   }
 
-  uint8_t cfg = 0;  // 0 = add, 1 = sub
+  if (job_slot != NULL) {
+    uint32_t taskSize = 0;
+    for (int i = 0; i < numInputs; i++) {
+      taskSize += job_slot->job.inputSizes[i];
+    }
+    mmio_write32(cu_base(cu_id) + CU_SIZE_OFF, taskSize);
+  }
 
-  // 写入操作数（写入到对应 CU 的寄存器地址）
-  dma_memcpy((void*)(cu_base(cu_id) + CU_OP_A_OFF), src, 16);
-  dma_memcpy((void*)(cu_base(cu_id) + CU_OP_B_OFF), src + 16, 16);
-  // 写入计算长度
-  mmio_write8(cu_base(cu_id) + CU_LENGTH_OFF, 16);
-  // 触发计算（写 config）
-  //   unsigned long long t0 = rdcycle64();
-  mmio_write8(cu_base(cu_id) + CU_CONFIG_OFF, cfg);
+  if (job_slot != NULL) {
+    mmio_write32(cu_base(cu_id) + CU_DELAY_OFF, job_slot->job.computeDelayMs);
+  }
+
+  mmio_write8(cu_base(cu_id) + CU_CONFIG_OFF, 1U);
 
   //   // 轮询 status bit0 == 1
   //   while ((mmio_read8(CU_STATUS) & 0x1) == 0) {
@@ -118,10 +117,12 @@ void vCuHwStartJob(uint32_t cu_id, uint32_t job_id) {
 
 static CuSlot_t gCuSlots[CU_MAX_COUNT];
 
-// __attribute__((weak)) void vCuHwStartJob(uint32_t cu_id, uint32_t job_id)
+// __attribute__((weak)) void vCuHwStartJob(uint32_t cu_id, uint32_t job_id,
+//                                          const void* job_info)
 // {
 //     (void)cu_id;
 //     (void)job_id;
+//     (void)job_info;
 // }
 
 void vCuInit(void) {
@@ -129,31 +130,47 @@ void vCuInit(void) {
     gCuSlots[i].waiter = NULL;
     gCuSlots[i].dag_node = NULL;
     gCuSlots[i].job_id = 0;
+    memset(&gCuSlots[i].job, 0, sizeof(gCuSlots[i].job));
   }
 }
 
-void vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
-  configASSERT(cu_id < CU_MAX_COUNT);
-
+uint32_t vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
+  static uint32_t s_rand = 0x13579bdfu;
   TaskHandle_t self = xTaskGetCurrentTaskHandle();
 
-  taskENTER_CRITICAL();
+  for (;;) {
+    taskENTER_CRITICAL();
+    if (cu_id == CU_ANY_ID) {
+      uint32_t start = s_rand % CU_MAX_COUNT;
+      for (uint32_t i = 0; i < CU_MAX_COUNT; i++) {
+        uint32_t id = (start + i) % CU_MAX_COUNT;
+        if (vCuIsHwIdle(id) && gCuSlots[id].waiter == NULL &&
+            gCuSlots[id].dag_node == NULL) {
+          cu_id = id;
+          break;
+        }
+      }
+      s_rand = lcg_next(s_rand);
+    }
+
+    if (cu_id < CU_MAX_COUNT && vCuIsHwIdle(cu_id) &&
+        gCuSlots[cu_id].waiter == NULL && gCuSlots[cu_id].dag_node == NULL) {
+      gCuSlots[cu_id].waiter = self;
+      gCuSlots[cu_id].job_id = job_id;
+      taskEXIT_CRITICAL();
+      break;
+    }
+    taskEXIT_CRITICAL();
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
 
   /* 使能对应CU IRQ */
   for (int i = 0; i < configNUMBER_OF_CORES; ++i) {
     vPlicInit(i, PLIC_IRQ_CU0 + cu_id);
   }
 
-  /* 当前设计：每个 CU 同一时间只允许 1 个 inflight 任务 */
-  configASSERT(gCuSlots[cu_id].waiter == NULL);
-  configASSERT(gCuSlots[cu_id].dag_node == NULL);
-  gCuSlots[cu_id].waiter = self;
-  gCuSlots[cu_id].job_id = job_id;
-
-  taskEXIT_CRITICAL();
-
   /* 真正启动 CU + DMA */
-  vCuHwStartJob(cu_id, job_id);
+  vCuHwStartJob(cu_id, job_id, NULL);
 
   /* 阻塞等待 PLIC 中断唤醒（不 busy-wait） */
   (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -161,26 +178,78 @@ void vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
   /* ISR 负责清理 slot，这里做一下防御性检查 */
   configASSERT(gCuSlots[cu_id].waiter == NULL);
   configASSERT(gCuSlots[cu_id].dag_node == NULL);
+
+  return cu_id;
 }
 
-void vCuSubmitDagJob(uint32_t cu_id, uint32_t job_id, struct DagNode* node) {
-  configASSERT(cu_id < CU_MAX_COUNT);
+uint32_t vCuSubmitDagJob(uint32_t cu_id, uint32_t job_id,
+                         struct DagNode* node) {
   configASSERT(node != NULL);
 
-  taskENTER_CRITICAL();
+  vDagPrepareAsyncOutputs(node);
+
+  static uint32_t s_rand = 0x2468ace0u;
+
+  for (;;) {
+    taskENTER_CRITICAL();
+    if (cu_id == CU_ANY_ID) {
+      uint32_t start = s_rand % CU_MAX_COUNT;
+      for (uint32_t i = 0; i < CU_MAX_COUNT; i++) {
+        uint32_t id = (start + i) % CU_MAX_COUNT;
+        if (vCuIsHwIdle(id) && gCuSlots[id].waiter == NULL &&
+            gCuSlots[id].dag_node == NULL) {
+          cu_id = id;
+          break;
+        }
+      }
+      s_rand = lcg_next(s_rand);
+    }
+
+    if (cu_id < CU_MAX_COUNT && vCuIsHwIdle(cu_id) &&
+        gCuSlots[cu_id].waiter == NULL && gCuSlots[cu_id].dag_node == NULL) {
+      gCuSlots[cu_id].dag_node = node;
+      gCuSlots[cu_id].job_id = job_id;
+      memset(&gCuSlots[cu_id].job, 0, sizeof(gCuSlots[cu_id].job));
+      gCuSlots[cu_id].job.computeDelayMs = node->computeDelayMs;
+      gCuSlots[cu_id].job.storageSizeBytes = node->storageSizeBytes;
+      taskEXIT_CRITICAL();
+      break;
+    }
+    taskEXIT_CRITICAL();
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
 
   /* 使能对应CU IRQ */
   for (int i = 0; i < configNUMBER_OF_CORES; ++i) {
     vPlicInit(i, PLIC_IRQ_CU0 + cu_id);
   }
 
-  configASSERT(gCuSlots[cu_id].waiter == NULL);
-  configASSERT(gCuSlots[cu_id].dag_node == NULL);
-  gCuSlots[cu_id].dag_node = node;
-  gCuSlots[cu_id].job_id = job_id;
-  taskEXIT_CRITICAL();
+  for (uint32_t i = 0; i < node->numInputs && i < CU_MAX_IO; i++) {
+    DagData* data = node->inputs[i];
+    if (data == NULL || data->buffer == NULL) {
+      continue;
+    }
+    gCuSlots[cu_id].job.inputAddrs[gCuSlots[cu_id].job.numInputs] =
+        (uintptr_t)data->buffer;
+    gCuSlots[cu_id].job.inputSizes[gCuSlots[cu_id].job.numInputs] =
+        data->sizeBytes;
+    gCuSlots[cu_id].job.numInputs++;
+  }
 
-  vCuHwStartJob(cu_id, job_id);
+  for (uint32_t i = 0; i < node->numOutputs && i < CU_MAX_IO; i++) {
+    DagData* data = node->outputs[i];
+    if (data == NULL || data->buffer == NULL) {
+      continue;
+    }
+    gCuSlots[cu_id].job.outputAddrs[gCuSlots[cu_id].job.numOutputs] =
+        (uintptr_t)data->buffer;
+    gCuSlots[cu_id].job.outputSizes[gCuSlots[cu_id].job.numOutputs] =
+        data->sizeBytes;
+    gCuSlots[cu_id].job.numOutputs++;
+  }
+
+  vCuHwStartJob(cu_id, job_id, &gCuSlots[cu_id]);
+  return cu_id;
 }
 
 void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
@@ -189,20 +258,25 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
   TaskHandle_t waiter = gCuSlots[cu_id].waiter;
   struct DagNode* dag_node = gCuSlots[cu_id].dag_node;
 
-  LOGF("Node %s handled CU %d ISR on core %d\n", gCuSlots[cu_id].dag_node->name,
-       cu_id, (uint32_t)portGET_CORE_ID());
+  if (dag_node != NULL) {
+    LOGF("Node %s handled CU %d ISR on core %d\n", dag_node->name, cu_id,
+         (uint32_t)portGET_CORE_ID());
+  }
 
-  /* TEST: 读取结果并打印 */
-  uint8_t* src = (uint8_t*)SRC_BUF;
-  uint8_t* dst = (uint8_t*)DST_BUF;
-  dma_memcpy(dst, (void*)(cu_base(cu_id) + CU_RESULT_OFF), 16);
-  for (int i = 0; i < 16; i++) {
-    LOGF("[%d] %u + %u =%u\n", i, src[i], src[i + 16], dst[i]);
+  /* TODO: 回收输出：从 CU 侧地址 DMA 到输出 buffer（源地址待定） */
+  for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
+    void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
+    uint32_t len = gCuSlots[cu_id].job.outputSizes[i];
+    if (dst == NULL || len == 0U) {
+      continue;
+    }
+    // dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
   }
 
   gCuSlots[cu_id].waiter = NULL;
   gCuSlots[cu_id].dag_node = NULL;
   gCuSlots[cu_id].job_id = 0;
+  memset(&gCuSlots[cu_id].job, 0, sizeof(gCuSlots[cu_id].job));
 
   if (waiter != NULL) {
     vTaskNotifyGiveFromISR(waiter, pxHigherPriorityTaskWoken);

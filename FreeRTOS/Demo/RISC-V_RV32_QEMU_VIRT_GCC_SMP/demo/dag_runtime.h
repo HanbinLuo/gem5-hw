@@ -20,10 +20,28 @@ typedef enum {
     DAG_NODE_ASYNC = 1
 } DagNodeMode;
 
+typedef struct DagData {
+    const char *name;
+    uint32_t sizeBytes;
+    void *buffer;
+    uint32_t consumers;
+    volatile uint32_t remaining_consumers;
+} DagData;
+
 typedef struct DagNode {
     const char *name;
     void (*run)(void *arg);
     void *arg;
+
+    uint32_t inputSizeBytes;
+    uint32_t outputSizeBytes;
+    uint32_t computeDelayMs;
+    uint32_t storageSizeBytes;
+
+    uint32_t numInputs;
+    DagData **inputs;
+    uint32_t numOutputs;
+    DagData **outputs;
 
     uint32_t indegree;
     uint32_t numSuccessors;
@@ -48,5 +66,8 @@ void vDagRuntimeStart(const DagRuntimeConfig *cfg);
 void vDagSubmitReadyNode(DagNode *node);
 void vDagNotifyAsyncDoneFromISR(DagNode *node,
                                 BaseType_t *pxHigherPriorityTaskWoken);
+void vDagPrepareAsyncOutputs(DagNode *node);
+uint32_t ulDagGetTempBytes(void);
+uint32_t ulDagGetTempPeakBytes(void);
 
 #endif /* DAG_RUNTIME_H */
