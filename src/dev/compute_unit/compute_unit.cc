@@ -15,7 +15,8 @@
 namespace gem5 {
 
 ComputeUnit::ComputeUnit(const Params &p)
-    : PlicIntDevice(p), computeEvent(*this)
+        : PlicIntDevice(p), input_region(region_size, 0), output_region(region_size, 0),
+            computeEvent(*this)
 {
     // no per-element operand/result arrays anymore
     // initialize 32-bit registers from params where appropriate
@@ -70,6 +71,14 @@ ComputeUnit::read(PacketPtr pkt)
             } else if (off >= 0x0C && off <= 0x0F) {
                 unsigned byte = off - 0x0C;
                 val = (compute_delay_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x1000 && off <= 0x4FFF) {
+                if (off <= 0x2FFF) {
+                    Addr idx = off - 0x1000;
+                    val = input_region[idx];
+                } else {
+                    Addr idx = off - 0x3000;
+                    val = output_region[idx];
+                }
             } else if (off == 0x10) {
                 val = config;
             } else if (off == 0x11) {
@@ -100,6 +109,14 @@ ComputeUnit::read(PacketPtr pkt)
         } else if (offset >= 0x0C && offset <= 0x0F) {
             unsigned byte = offset - 0x0C;
             val = (compute_delay_reg >> (8 * byte)) & 0xFF;
+        } else if (offset >= 0x1000 && offset <= 0x4FFF) {
+            if (offset <= 0x2FFF) {
+                Addr idx = offset - 0x1000;
+                val = input_region[idx];
+            } else {
+                Addr idx = offset - 0x3000;
+                val = output_region[idx];
+            }
         } else if (offset == 0x10) {
             val = config;
         } else if (offset == 0x11) {
@@ -125,6 +142,14 @@ ComputeUnit::read(PacketPtr pkt)
             } else if (off >= 0x0C && off <= 0x0F) {
                 unsigned byte = off - 0x0C;
                 val = (compute_delay_reg >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x1000 && off <= 0x4FFF) {
+                if (off <= 0x2FFF) {
+                    Addr idx = off - 0x1000;
+                    val = input_region[idx];
+                } else {
+                    Addr idx = off - 0x3000;
+                    val = output_region[idx];
+                }
             } else if (off == 0x10) {
                 val = config;
             } else if (off == 0x11) {
@@ -171,10 +196,10 @@ ComputeUnit::write(PacketPtr pkt)
 
     // For writes, read data from pkt buffer (supports multi-byte writes)
     uint8_t *buf = pkt->getPtr<uint8_t>();
-    for (unsigned i = 0; i < pkt->getSize(); ++i) {
+        for (unsigned i = 0; i < pkt->getSize(); ++i) {
         Addr off = offset + i;
         uint8_t v = buf[i];
-        // write bytes into 32-bit registers or control bytes
+        // write bytes into 32-bit registers, control bytes, or region buffers
         if (off <= 0x03) {
             unsigned byte = off - 0x00;
             uint32_t mask = uint32_t(0xFF) << (8 * byte);
@@ -191,6 +216,14 @@ ComputeUnit::write(PacketPtr pkt)
             unsigned byte = off - 0x0C;
             uint32_t mask = uint32_t(0xFF) << (8 * byte);
             compute_delay_reg = (compute_delay_reg & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off >= 0x1000 && off <= 0x4FFF) {
+            if (off <= 0x2FFF) {
+                Addr idx = off - 0x1000;
+                input_region[idx] = v;
+            } else {
+                Addr idx = off - 0x3000;
+                output_region[idx] = v;
+            }
         } else if (off == 0x10) {
             // config write: start computation when written
             config = v;

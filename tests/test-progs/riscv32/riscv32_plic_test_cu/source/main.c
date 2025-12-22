@@ -31,6 +31,39 @@ plt_virt_init();
 
     printf("Starting Interrupt-Driven Compute Test...\n");
 
+    /*验证一下输入输出的0x4000范围部分地址*/
+    printf("Testing CU input/output MMIO regions...\n");
+    int failures = 0;
+    for (int i = 0; i < 16; ++i) {
+        uintptr_t addr = CU_INPUT_BASE + i;
+        mmio_write8(addr, (uint8_t)(0xA0 + i));
+    }
+    for (int i = 0; i < 16; ++i) {
+        uintptr_t addr = CU_INPUT_BASE + i;
+        uint8_t v = mmio_read8(addr);
+        if (v != (uint8_t)(0xA0 + i)) {
+            printf("INPUT mismatch at %d: got 0x%02x expected 0x%02x\n", i, v, (uint8_t)(0xA0 + i));
+            failures++;
+        }
+    }
+
+    for (int i = 0; i < 16; ++i) {
+        uintptr_t addr = CU_OUTPUT_BASE + i;
+        mmio_write8(addr, (uint8_t)(0xB0 + i));
+    }
+    for (int i = 0; i < 16; ++i) {
+        uintptr_t addr = CU_OUTPUT_BASE + i;
+        uint8_t v = mmio_read8(addr);
+        if (v != (uint8_t)(0xB0 + i)) {
+            printf("OUTPUT mismatch at %d: got 0x%02x expected 0x%02x\n", i, v, (uint8_t)(0xB0 + i));
+            failures++;
+        }
+    }
+    if (failures == 0)
+        printf("MMIO input/output self-test passed\n");
+    else
+        printf("MMIO input/output self-test failed: %d errors\n", failures);
+
     unsigned long long t0 = rdcycle64();
     // cu_id=0, job_id=42, size=2048, latency=12345*500 ticks, config=0
     vCuHwStartJob(0, 42, 2048, 12345*500, 0);

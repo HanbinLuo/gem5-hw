@@ -12,6 +12,8 @@ class ComputeUnit(PlicIntDevice):
     # do not redefine it to avoid shadowing
     # UART-like device uses small register space: data(0) + status(4)
     # pio_size = Param.Addr(0x40, "Size of address range")
+    # Expand PIO region to cover input/output ranges (0x0 - 0x4FFF)
+    # pio_size = Param.Addr(0x5000, "Size of address range")
 
     # Whether writes should be printed to host stdout
     # (useful to disable in tests)

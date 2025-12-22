@@ -231,31 +231,31 @@ system.platform.simple_dma.dma = system.membus.cpu_side_ports
 # ---------------------------- Compute Unit --------------------------- #
 system.platform.compute_unit_0 = ComputeUnit(
     pio_addr=0x10009000,
-    pio_size=0x40,
+    pio_size=0x5000,
     pio_latency="1ns",
     cu_id=0,
     interrupt_id=0xB,
 )
 
 system.platform.compute_unit_1 = ComputeUnit(
-    pio_addr=0x10009040,
-    pio_size=0x40,
+    pio_addr=0x1000E000,
+    pio_size=0x5000,
     pio_latency="1ns",
     cu_id=1,
     interrupt_id=0xC,
 )
 
 system.platform.compute_unit_2 = ComputeUnit(
-    pio_addr=0x10009080,
-    pio_size=0x40,
+    pio_addr=0x10013000,
+    pio_size=0x5000,
     pio_latency="1ns",
     cu_id=2,
     interrupt_id=0xD,
 )
 
 system.platform.compute_unit_3 = ComputeUnit(
-    pio_addr=0x10009120,
-    pio_size=0x40,
+    pio_addr=0x10018000,
+    pio_size=0x5000,
     pio_latency="1ns",
     cu_id=3,
     interrupt_id=0xE,

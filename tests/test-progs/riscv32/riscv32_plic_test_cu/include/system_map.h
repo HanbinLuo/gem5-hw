@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define CU_BASE    0x10009000UL
+#define CU_BASE    0x1000e000UL
 /* New ComputeUnit register map (all offsets are byte addresses)
         0x00..0x03 : CU_ID    (32-bit)
         0x04..0x07 : JOB_ID   (32-bit)
@@ -20,6 +20,12 @@
 #define CU_CONFIG  (CU_BASE + 0x10)
 #define CU_STATUS  (CU_BASE + 0x11)
 #define CU_BUSY    (CU_BASE + 0x12)
+
+/* Input/Output regions (each 0x2000 bytes) mapped relative to device PIO
+        offsets: input at +0x1000, output at +0x3000 */
+#define CU_INPUT_BASE  (CU_BASE + 0x1000)
+#define CU_OUTPUT_BASE (CU_BASE + 0x3000)
+#define CU_REGION_SIZE (0x2000u)
 
 #define DMA_BASE 0x50000000u
 

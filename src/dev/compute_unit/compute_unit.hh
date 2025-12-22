@@ -1,6 +1,8 @@
 #ifndef DEV_MY_COMPUTE_HH
 #define DEV_MY_COMPUTE_HH
 
+#include <vector>
+
 #include "dev/io_device.hh"
 #include "dev/riscv/plic_device.hh"
 #include "params/ComputeUnit.hh"
@@ -42,6 +44,16 @@ class ComputeUnit : public PlicIntDevice
     uint8_t config{0};    // offset 0x10
     uint8_t status{0};    // offset 0x11
     uint8_t busy{0};      // offset 0x12
+
+    // Memory-mapped input/output regions (each 0x2000 bytes)
+    // Input region mapped at PIO offsets 0x1000 .. 0x2FFF
+    // Output region mapped at PIO offsets 0x3000 .. 0x4FFF
+    static constexpr Addr input_base = 0x1000;
+    static constexpr Addr output_base = 0x3000;
+    static constexpr size_t region_size = 0x2000;
+
+    std::vector<uint8_t> input_region;
+    std::vector<uint8_t> output_region;
 
     // computeDelay param removed: computation delay is read from `compute_delay_reg` at runtime
     // (keep member for compatibility with existing constructors but set to 0)
