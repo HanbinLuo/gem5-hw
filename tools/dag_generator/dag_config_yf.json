@@ -1,0 +1,43 @@
+{
+    "nodes": [
+        {
+            "name": "A",
+            "job_id": 0,
+            "compute_delay": "UINT32_MAX",
+            "storage_size": 128,
+            "outputs": [
+                {"name": "A->B", "size": 64, "consumers": ["B"]},
+                {"name": "A->C", "size": 32, "consumers": ["C"]}
+            ]
+        },
+        {
+            "name": "B",
+            "job_id": 1,
+            "compute_delay": "UINT32_MAX",
+            "storage_size": 64,
+            "outputs": [
+                {"name": "B->D", "size": 48, "consumers": ["D"]}
+            ]
+        },
+        {
+            "name": "C",
+            "job_id": 2,
+            "compute_delay": "UINT32_MAX",
+            "storage_size": 64,
+            "outputs": [
+                {"name": "C->D", "size": 16, "consumers": ["D"]}
+            ]
+        },
+        {
+            "name": "D",
+            "job_id": 3,
+            "compute_delay": "UINT32_MAX",
+            "storage_size": 256,
+            "outputs": []
+        }
+    ],
+    "config": {
+        "worker_func": "vCuNodeWork",
+        "default_cu_id": "CU_ANY_ID"
+    }
+}

@@ -1,0 +1,54 @@
+{
+    "nodes": [
+        {
+            "name": "init",
+            "job_id": 0,
+            "compute_delay": 4294967295,
+            "storage_size": 128,
+            "outputs": [
+                {"name": "init_to_x1_add_x2", "size": 64, "consumers": ["x1_add_x2"]},
+                {"name": "init_to_x3_add_x4", "size": 64, "consumers": ["x3_add_x4"]}
+            ]
+        },
+        {
+            "name": "x1_add_x2",
+            "job_id": 2,
+            "compute_delay": 4294967295,
+            "storage_size": 256,
+            "outputs": [
+                {"name": "x1_add_x2_to_sub", "size": 64, "consumers": ["sub"]}
+            ]
+        },
+        {
+            "name": "x3_add_x4",
+            "job_id": 2,
+            "compute_delay": 4294967295,
+            "storage_size": 256,
+            "outputs": [
+                {"name": "x3_add_x4_to_sub", "size": 64, "consumers": ["sub"]}
+            ]
+        },
+        {
+            "name": "sub",
+            "job_id": 3,
+            "compute_delay": 4294967295,
+            "storage_size": 256,
+            "outputs": [
+                {"name": "sub_to_end", "size": 64, "consumers": ["end"]}
+            ]
+        },
+        {
+            "name": "end",
+            "job_id": 3,
+            "compute_delay": 4294967295,
+            "storage_size": 256,
+            "outputs": [
+                
+            ]
+        }
+    ],
+    "config": {
+        "worker_func": "vCuNodeWork",
+        "default_cu_id": "CU_ANY_ID"
+    }
+}
