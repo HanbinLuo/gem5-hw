@@ -16,7 +16,7 @@ struct DagNode;
 
 /* CU 基址：支持按 cu_id 偏移（stride）映射多个 CU，间隔为 0x40 */
 #define CU_BASE0 0x10009000UL
-#define CU_STRIDE 0x40UL
+#define CU_STRIDE 0x5000UL
 
 /* CU 寄存器偏移（地址规划占位，具体映射待硬件/文档确认） */
 /* ComputeUnit register map (all offsets are byte addresses)
@@ -36,12 +36,12 @@ struct DagNode;
 #define CU_CONFIG_OFF 0x10
 #define CU_STATUS_OFF 0x11
 #define CU_BUSY_OFF 0x12
-#define CU_INPUT_ADDR0_OFF 0x20
-#define CU_INPUT_SIZE0_OFF 0x24
-#define CU_INPUT_STRIDE 0x10
-#define CU_OUTPUT_ADDR0_OFF 0x30
-#define CU_OUTPUT_SIZE0_OFF 0x34
-#define CU_OUTPUT_STRIDE 0x10
+#define CU_INPUT_ADDR0_OFF 0x1004
+#define CU_INPUT_SIZE0_OFF 0x1000
+#define CU_INPUT_STRIDE 0x800
+#define CU_OUTPUT_ADDR0_OFF 0x3004
+#define CU_OUTPUT_SIZE0_OFF 0x3000
+#define CU_OUTPUT_STRIDE 0x800
 
 static inline uintptr_t cu_base(uint32_t id) {
   return (uintptr_t)(CU_BASE0 + id * CU_STRIDE);

@@ -36,3 +36,5 @@ configs/dram/lowp_sweep.cfg
 .vscode
 typings
 .DS_Store
+FreeRTOS/Demo/RISC-V_RV32_QEMU_VIRT_GCC_SMP/elf.log
+FreeRTOS/Demo/RISC-V_RV32_QEMU_VIRT_GCC_SMP/demo/build/

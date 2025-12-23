@@ -67,20 +67,12 @@ void vCuHwStartJob(uint32_t cu_id, uint32_t job_id, const CuSlot_t* job_info) {
 
   (void)job_id;
 
-  /* TODO: 以下寄存器映射为占位，需与 CU/DMA 真实映射对齐 */
-  // for (uint32_t i = 0; i < numInputs; i++) {
-  //   mmio_write32(cu_base(cu_id) + CU_INPUT_ADDR0_OFF + i * CU_INPUT_STRIDE,
-  //                (uint32_t)job_slot->job.inputAddrs[i]);
-  //   mmio_write32(cu_base(cu_id) + CU_INPUT_SIZE0_OFF + i * CU_INPUT_STRIDE,
-  //                job_slot->job.inputSizes[i]);
-  // }
-
-  // for (uint32_t i = 0; i < numOutputs; i++) {
-  //   mmio_write32(cu_base(cu_id) + CU_OUTPUT_ADDR0_OFF + i * CU_OUTPUT_STRIDE,
-  //                (uint32_t)job_slot->job.outputAddrs[i]);
-  //   mmio_write32(cu_base(cu_id) + CU_OUTPUT_SIZE0_OFF + i * CU_OUTPUT_STRIDE,
-  //                job_slot->job.outputSizes[i]);
-  // }
+  /* 搬移数据到 CU */
+  for (uint32_t i = 0; i < numInputs; i++) {
+    dma_memcpy((void*)cu_base(cu_id) + CU_INPUT_ADDR0_OFF + i * CU_INPUT_STRIDE,
+               (const void*)job_slot->job.inputAddrs[i],
+               job_slot->job.inputSizes[i]);
+  }
 
   if (job_slot != NULL) {
     mmio_write32(cu_base(cu_id) + CU_JOB_OFF, job_id);
@@ -263,14 +255,14 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
          (uint32_t)portGET_CORE_ID());
   }
 
-  /* TODO: 回收输出：从 CU 侧地址 DMA 到输出 buffer（源地址待定） */
+  /* 回收输出：从 CU 侧地址 DMA 到输出 buffer */
   for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
     void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
     uint32_t len = gCuSlots[cu_id].job.outputSizes[i];
     if (dst == NULL || len == 0U) {
       continue;
     }
-    // dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
+    dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
   }
 
   gCuSlots[cu_id].waiter = NULL;
