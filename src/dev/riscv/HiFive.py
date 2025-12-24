@@ -212,17 +212,9 @@ class HiFive(HiFiveBase):
             devices.append(self.disk)
         if hasattr(self, "rng"):
             devices.append(self.rng)
-        # 添加 compute unit 为 off-chip 外设
-        if hasattr(self, "compute_unit"):
-            devices.append(self.compute_unit)
-        if hasattr(self, "compute_unit_0"):
-            devices.append(self.compute_unit_0)
-        if hasattr(self, "compute_unit_1"):
-            devices.append(self.compute_unit_1)
-        if hasattr(self, "compute_unit_2"):
-            devices.append(self.compute_unit_2)
-        if hasattr(self, "compute_unit_3"):
-            devices.append(self.compute_unit_3)
+        # 自动添加 compute_units 列表中的所有设备
+        if hasattr(self, "compute_units"):
+            devices.extend(self.compute_units)
         return devices
 
     def attachPlic(self):

@@ -229,37 +229,19 @@ system.platform.simple_dma = SimpleDMA(pio_addr=0x50000000, pio_size=0x1000)
 system.platform.simple_dma.dma = system.membus.cpu_side_ports
 
 # ---------------------------- Compute Unit --------------------------- #
-system.platform.compute_unit_0 = ComputeUnit(
-    pio_addr=0x10009000,
-    pio_size=0x5000,
-    pio_latency="1ns",
-    cu_id=0,
-    interrupt_id=0xB,
-)
-
-system.platform.compute_unit_1 = ComputeUnit(
-    pio_addr=0x1000E000,
-    pio_size=0x5000,
-    pio_latency="1ns",
-    cu_id=1,
-    interrupt_id=0xC,
-)
-
-system.platform.compute_unit_2 = ComputeUnit(
-    pio_addr=0x10013000,
-    pio_size=0x5000,
-    pio_latency="1ns",
-    cu_id=2,
-    interrupt_id=0xD,
-)
-
-system.platform.compute_unit_3 = ComputeUnit(
-    pio_addr=0x10018000,
-    pio_size=0x5000,
-    pio_latency="1ns",
-    cu_id=3,
-    interrupt_id=0xE,
-)
+num_compute_units = 256
+cu_base_addr = 0x10100000
+#CU分配1MB
+cu_size = 0x100000
+system.platform.compute_units = [
+    ComputeUnit(
+        pio_addr=cu_base_addr + i * cu_size,
+        pio_size=cu_size,
+        pio_latency="1ns",
+        cu_id=i,
+        interrupt_id=0xB + i,
+    ) for i in range(num_compute_units)
+]
 
 # VirtIOMMIO
 if args.disk_image:
