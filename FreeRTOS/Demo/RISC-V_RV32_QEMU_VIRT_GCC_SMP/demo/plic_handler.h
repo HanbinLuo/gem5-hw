@@ -15,10 +15,8 @@
 
 #define PLIC_BASE 0x0C000000u
 #define PLIC_CONTEXT 0u
-#define PLIC_IRQ_CU0 11u
-#define PLIC_IRQ_CU1 12u
-#define PLIC_IRQ_CU2 13u
-#define PLIC_IRQ_CU3 14u
+#define PLIC_IRQ_CU0      11u
+#define PLIC_IRQ_CU_LAST  (PLIC_IRQ_CU0 + CU_MAX_COUNT - 1)
 
 void vPlicInit(uint32_t hartID, uint32_t irqID);
 void vPlicDeinit(uint32_t hartID, uint32_t irqID);

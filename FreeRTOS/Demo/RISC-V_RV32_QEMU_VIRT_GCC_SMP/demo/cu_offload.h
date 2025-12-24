@@ -10,13 +10,13 @@
 
 struct DagNode;
 
-#define CU_MAX_COUNT 4        /* 现在只用 4 个 CU，将来可以扩展 */
+#define CU_MAX_COUNT 256        /* 现在只用 256 个 CU，将来可以扩展 */
 #define CU_MAX_IO 4           /* 每个 CU 任务最多传 4 路输入/输出描述 */
 #define CU_ANY_ID 0xFFFFFFFFu /* 让运行时选择空闲 CU */
 
 /* CU 基址：支持按 cu_id 偏移（stride）映射多个 CU，间隔为 0x40 */
-#define CU_BASE0 0x10009000UL
-#define CU_STRIDE 0x5000UL
+#define CU_BASE0 0x10100000UL
+#define CU_STRIDE 0x100000UL
 
 /* CU 寄存器偏移（地址规划占位，具体映射待硬件/文档确认） */
 /* ComputeUnit register map (all offsets are byte addresses)

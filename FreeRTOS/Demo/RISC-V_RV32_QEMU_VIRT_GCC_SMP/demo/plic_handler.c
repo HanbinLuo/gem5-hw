@@ -18,8 +18,10 @@ static inline uint32_t plic_priority_addr(uint32_t source) {
   return PLIC_BASE + 4u * source;
 }
 
-static inline uint32_t plic_enable_addr(uint32_t context) {
-  return PLIC_BASE + 0x002000u + (context * 0x80u);
+/* 修改使能寄存器地址计算，增加根据 irqID 的偏移 */
+static inline uint32_t plic_enable_addr(uint32_t context, uint32_t irqID) {
+  // 每个寄存器管 32 个中断，所以偏移是 (irqID / 32) * 4 字节
+  return PLIC_BASE + 0x002000u + (context * 0x80u) + ((irqID / 32u) * 4u);
 }
 
 static inline uint32_t plic_threshold_addr(uint32_t context) {
@@ -34,17 +36,24 @@ static inline uint32_t plic_claim_addr(uint32_t context) {
 void vPlicInit(uint32_t hartID, uint32_t irqID) {
   plic_mmio_write32(plic_priority_addr(irqID), 1u);
 
-  uint32_t enables = plic_mmio_read32(plic_enable_addr(hartID));
-  enables |= (1u << irqID);
-  plic_mmio_write32(plic_enable_addr(hartID), enables);
+  // 计算该中断号在对应 32 位寄存器中的具体哪一位
+  uint32_t addr = plic_enable_addr(hartID, irqID);
+  uint32_t bit = irqID % 32u;
+
+  uint32_t enables = plic_mmio_read32(addr);
+  enables |= (1u << bit);
+  plic_mmio_write32(addr, enables);
 
   plic_mmio_write32(plic_threshold_addr(hartID), 0u);
 }
 
 void vPlicDeinit(uint32_t hartID, uint32_t irqID) {
-  uint32_t enables = plic_mmio_read32(plic_enable_addr(hartID));
-  enables &= ~(1u << irqID);
-  plic_mmio_write32(plic_enable_addr(hartID), enables);
+  uint32_t addr = plic_enable_addr(hartID, irqID);
+  uint32_t bit = irqID % 32u;
+
+  uint32_t enables = plic_mmio_read32(addr);
+  enables &= ~(1u << bit);
+  plic_mmio_write32(addr, enables);
 }
 
 /*
@@ -72,32 +81,9 @@ BaseType_t xPortHandleExternalInterrupt(uint32_t ulMcause, uint32_t ulMepc) {
   }
 
   /*
-   * ========== 多 CU 中断处理说明 ==========
-   *
-   * 1. PLIC IRQ 与 CU 的映射关系（定义在 plic_handler.h）：
-   *    - PLIC_IRQ_CU0 = 11  ->  CU0 完成中断
-   *    - PLIC_IRQ_CU1 = 12  ->  CU1 完成中断
-   *    - PLIC_IRQ_CU2 = 13  ->  CU2 完成中断
-   *    - PLIC_IRQ_CU3 = 14  ->  CU3 完成中断
-   *
-   * 2. 中断初始化（在 dag_runtime.c 的 vDagWorkerTask 中）：
-   *    每个 worker 启动时为当前 hart 使能所有 CU 的 PLIC 中断：
-   *      vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU0);
-   *      vPlicInit(portGET_CORE_ID(), PLIC_IRQ_CU1);
-   *      ...
-   *
-   * 3. 中断处理流程：
-   *    a) 读取 PLIC claim 寄存器获取中断源号
-   *    b) 完成 claim（写回 claim 寄存器）
-   *    c) 根据 claim 计算 cu_id = claim - PLIC_IRQ_CU0
-   *    d) 调用 vCuHandleIsr(cu_id, ...) 处理对应 CU 的完成事件
-   *
-   * 4. 并发支持：
-   *    - 多个 CU 可同时运行（如 CU0 执行 nodeB，CU1 执行 nodeC）
-   *    - 各自完成时触发各自的 PLIC 中断（IRQ 11, 12, ...）
-   *    - ISR 会正确路由到对应的 gCuSlots[cu_id] 并通知等待者
+    * 处理 CU IRQ 事件
    */
-  if (claim >= PLIC_IRQ_CU0 && claim <= PLIC_IRQ_CU3) {
+  if (claim >= PLIC_IRQ_CU0 && claim <= PLIC_IRQ_CU_LAST) {
     /* 将 PLIC claim 映射为 cu_id（假定 CU IRQ 号连续分配） */
     uint32_t cu_id = claim - PLIC_IRQ_CU0;
     /* 调用 CU/DAG 桥接层处理该 CU 的完成事件 */
