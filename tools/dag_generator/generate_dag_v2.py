@@ -7,6 +7,10 @@ def sanitize(name, tid):
     clean = re.sub(r'[^a-zA-Z0-9_]', '_', name)
     return f"{clean}_{tid}"
 
+def sanitize_data_name(name):
+    # Replace non-alphanumeric with underscore for data names
+    return re.sub(r'[^a-zA-Z0-9_]', '_', name)
+
 def parse_port(port_str):
     # port_str is like "0b0000000000"
     val = int(port_str, 2)
@@ -33,7 +37,8 @@ def generate_c_code(json_file, output_file):
             'id': tid,
             'name': name,
             'safe_name': safe_name,
-            'inputs': [],  # Data objects consumed
+            'inputs': [],  # Data objects consumed (list of data_obj references)
+            'input_data_list': [], # All input data info for this task
             'outputs': {}, # outputIdx -> Data object produced
             'successors': set(), # Set of safe_names
             'producers': set(), # Set of producer safe_names
@@ -43,15 +48,53 @@ def generate_c_code(json_file, output_file):
         nodes.append(node_info)
         node_map[tid] = node_info
 
-    # Data objects: (producer_id, output_idx) -> data_info
-    data_objects = {}
+    # Data objects: unique by name -> data_info
+    # For external data (type 0b01): keyed by name
+    # For task-to-task (type 0b00): keyed by (producer_id, output_idx)
+    data_objects = {}          # For task-to-task dependencies
+    external_data_objects = {} # For external/constant data (type 0b01)
 
     for t in tasks_raw:
         consumer_id = t['current_taskId']
         consumer_node = node_map[consumer_id]
         
         for inp in t.get('all_input', []):
-            if inp.get('type') == "0b00": # Task-to-task dependency
+            input_type = inp.get('type', '')
+            input_name = inp.get('name', f"data_{consumer_id}_{len(consumer_node['input_data_list'])}")
+            input_length = inp.get('length', 64)  # Default 64 if not specified
+            safe_data_name = sanitize_data_name(input_name)
+            
+            if input_type == "0b01": # External/constant data input
+                key = safe_data_name
+                
+                if key not in external_data_objects:
+                    external_data_objects[key] = {
+                        'name': input_name,
+                        'safe_name': safe_data_name,
+                        'var_name': f"extdata_{safe_data_name}",
+                        'producer': None,  # No producer - external data
+                        'consumers': [],
+                        'size': input_length,
+                        'is_external': True
+                    }
+                
+                data_obj = external_data_objects[key]
+                # Update size to max if different tasks have different sizes
+                if input_length > data_obj['size']:
+                    data_obj['size'] = input_length
+                    
+                if consumer_node['safe_name'] not in data_obj['consumers']:
+                    data_obj['consumers'].append(consumer_node['safe_name'])
+                
+                # Add to this node's input list
+                consumer_node['input_data_list'].append({
+                    'data_obj': data_obj,
+                    'name': input_name,
+                    'length': input_length,
+                    'type': 'external'
+                })
+                
+            elif input_type == "0b00": # Task-to-task dependency
                 producer_id, out_idx = parse_port(inp['parentTasksPort'])
                 
                 if producer_id not in node_map:
@@ -62,21 +105,35 @@ def generate_c_code(json_file, output_file):
                 key = (producer_id, out_idx)
                 
                 if key not in data_objects:
-                    data_name = f"{producer_node['safe_name']}_out{out_idx}"
+                    # Use the input name from JSON if available
+                    data_name = input_name if input_name else f"{producer_node['safe_name']}_out{out_idx}"
+                    safe_data_name = sanitize_data_name(data_name)
                     data_objects[key] = {
                         'name': data_name,
-                        'var_name': f"data_{data_name}",
+                        'safe_name': safe_data_name,
+                        'var_name': f"data_{safe_data_name}",
                         'producer': producer_node['safe_name'],
                         'consumers': [],
-                        'size': 64 # Default size as it's not explicit for edges in dag1.json
+                        'size': input_length,
+                        'is_external': False
                     }
                 
                 data_obj = data_objects[key]
+                # Update size to max if different consumers expect different sizes
+                if input_length > data_obj['size']:
+                    data_obj['size'] = input_length
+                    
                 if consumer_node['safe_name'] not in data_obj['consumers']:
                     data_obj['consumers'].append(consumer_node['safe_name'])
                 
                 # Link to nodes
                 consumer_node['inputs'].append(data_obj)
+                consumer_node['input_data_list'].append({
+                    'data_obj': data_obj,
+                    'name': input_name,
+                    'length': input_length,
+                    'type': 'task_dep'
+                })
                 consumer_node['producers'].add(producer_node['safe_name'])
                 producer_node['outputs'][out_idx] = data_obj
                 producer_node['successors'].add(consumer_node['safe_name'])
@@ -106,22 +163,32 @@ def generate_c_code(json_file, output_file):
         lines.append(f"static DagNode node_{n['safe_name']};")
     lines.append("")
 
-    # Data Objects
-    for d in data_objects.values():
-        lines.append(f"static DagData {d['var_name']};")
-    lines.append("")
+    # External Data Objects (type 0b01)
+    if external_data_objects:
+        lines.append("/* External/Constant Data Objects */")
+        for d in external_data_objects.values():
+            lines.append(f"static DagData {d['var_name']}; /* {d['name']}, size={d['size']} */")
+        lines.append("")
+
+    # Task-to-Task Data Objects (type 0b00)
+    if data_objects:
+        lines.append("/* Task-to-Task Data Objects */")
+        for d in data_objects.values():
+            lines.append(f"static DagData {d['var_name']}; /* {d['name']}, size={d['size']} */")
+        lines.append("")
 
     # Contexts
     for n in nodes:
         lines.append(f"static CuNodeCtx_t ctx_{n['safe_name']};")
     lines.append("")
 
-    # Arrays
+    # Arrays - now include all inputs (external + task dependencies)
     for n in nodes:
         if n['successors']:
             lines.append(f"static DagNode* succOf_{n['safe_name']}[{len(n['successors'])}];")
-        if n['inputs']:
-            lines.append(f"static DagData* inputs_{n['safe_name']}[{len(n['inputs'])}];")
+        total_inputs = len(n['input_data_list'])
+        if total_inputs > 0:
+            lines.append(f"static DagData* inputs_{n['safe_name']}[{total_inputs}];")
         if n['outputs']:
             lines.append(f"static DagData* outputs_{n['safe_name']}[{len(n['outputs'])}];")
     lines.append("")
@@ -137,13 +204,25 @@ def generate_c_code(json_file, output_file):
     # Init function
     lines.append("static void vDagInit(void) {")
     
-    # Init Data
-    for d in data_objects.values():
-        lines.append(f"  memset(&{d['var_name']}, 0, sizeof(DagData));")
-        lines.append(f"  {d['var_name']}.name = \"{d['name']}\";")
-        lines.append(f"  {d['var_name']}.sizeBytes = {d['size']}U;")
-        lines.append(f"  {d['var_name']}.consumers = {len(d['consumers'])}U;")
-    lines.append("")
+    # Init External Data Objects
+    if external_data_objects:
+        lines.append("  /* Initialize External/Constant Data Objects */")
+        for d in external_data_objects.values():
+            lines.append(f"  memset(&{d['var_name']}, 0, sizeof(DagData));")
+            lines.append(f"  {d['var_name']}.name = \"{d['name']}\";")
+            lines.append(f"  {d['var_name']}.sizeBytes = {d['size']}U;")
+            lines.append(f"  {d['var_name']}.consumers = {len(d['consumers'])}U;")
+        lines.append("")
+    
+    # Init Task-to-Task Data Objects
+    if data_objects:
+        lines.append("  /* Initialize Task-to-Task Data Objects */")
+        for d in data_objects.values():
+            lines.append(f"  memset(&{d['var_name']}, 0, sizeof(DagData));")
+            lines.append(f"  {d['var_name']}.name = \"{d['name']}\";")
+            lines.append(f"  {d['var_name']}.sizeBytes = {d['size']}U;")
+            lines.append(f"  {d['var_name']}.consumers = {len(d['consumers'])}U;")
+        lines.append("")
 
     # Init Nodes
     for n in nodes:
@@ -153,15 +232,21 @@ def generate_c_code(json_file, output_file):
         lines.append(f"  node_{sn}.name = \"{n['name']}\";")
         lines.append(f"  node_{sn}.run = vCuNodeWork;")
         lines.append(f"  node_{sn}.arg = &ctx_{sn};")
+        # 设置为0或者UINT32_MAX都没问题，但是设置和storage_size一样会卡死
+        # lines.append(f"  node_{sn}.computeDelayMs = {n['storage_size']}U;")
+        lines.append(f"  node_{sn}.computeDelayMs = UINT32_MAX;")
         lines.append(f"  node_{sn}.storageSizeBytes = {n['storage_size']}U;")
         lines.append(f"  node_{sn}.indegree = {len(n['producers'])}U;")
         lines.append(f"  node_{sn}.mode = DAG_NODE_ASYNC;")
         
-        if n['inputs']:
-            lines.append(f"  node_{sn}.numInputs = {len(n['inputs'])}U;")
+        # Include all inputs (external + task dependencies)
+        total_inputs = len(n['input_data_list'])
+        if total_inputs > 0:
+            lines.append(f"  node_{sn}.numInputs = {total_inputs}U;")
             lines.append(f"  node_{sn}.inputs = inputs_{sn};")
-            for i, d in enumerate(n['inputs']):
-                lines.append(f"  inputs_{sn}[{i}] = &{d['var_name']};")
+            for i, inp_info in enumerate(n['input_data_list']):
+                d = inp_info['data_obj']
+                lines.append(f"  inputs_{sn}[{i}] = &{d['var_name']}; /* {inp_info['name']}, len={inp_info['length']} */")
         
         if n['outputs']:
             lines.append(f"  node_{sn}.numOutputs = {len(n['outputs'])}U;")
