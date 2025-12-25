@@ -249,7 +249,7 @@ static void vDagInit(void) {
   node_Task_fft_6.run = vCuNodeWork;
   node_Task_fft_6.arg = &ctx_Task_fft_6;
   node_Task_fft_6.storageSizeBytes = 1920U;
-  node_Task_fft_6.indegree = 1U;
+  node_Task_fft_6.indegree = 2U;
   node_Task_fft_6.mode = DAG_NODE_ASYNC;
   node_Task_fft_6.numInputs = 2U;
   node_Task_fft_6.inputs = inputs_Task_fft_6;
@@ -265,7 +265,7 @@ static void vDagInit(void) {
   node_Task_fft_1_7.run = vCuNodeWork;
   node_Task_fft_1_7.arg = &ctx_Task_fft_1_7;
   node_Task_fft_1_7.storageSizeBytes = 1920U;
-  node_Task_fft_1_7.indegree = 1U;
+  node_Task_fft_1_7.indegree = 2U;
   node_Task_fft_1_7.mode = DAG_NODE_ASYNC;
   node_Task_fft_1_7.numInputs = 2U;
   node_Task_fft_1_7.inputs = inputs_Task_fft_1_7;
@@ -281,7 +281,7 @@ static void vDagInit(void) {
   node_Task_fft_2_8.run = vCuNodeWork;
   node_Task_fft_2_8.arg = &ctx_Task_fft_2_8;
   node_Task_fft_2_8.storageSizeBytes = 1920U;
-  node_Task_fft_2_8.indegree = 1U;
+  node_Task_fft_2_8.indegree = 2U;
   node_Task_fft_2_8.mode = DAG_NODE_ASYNC;
   node_Task_fft_2_8.numInputs = 2U;
   node_Task_fft_2_8.inputs = inputs_Task_fft_2_8;
@@ -297,7 +297,7 @@ static void vDagInit(void) {
   node_Task_fft_3_9.run = vCuNodeWork;
   node_Task_fft_3_9.arg = &ctx_Task_fft_3_9;
   node_Task_fft_3_9.storageSizeBytes = 1920U;
-  node_Task_fft_3_9.indegree = 1U;
+  node_Task_fft_3_9.indegree = 2U;
   node_Task_fft_3_9.mode = DAG_NODE_ASYNC;
   node_Task_fft_3_9.numInputs = 2U;
   node_Task_fft_3_9.inputs = inputs_Task_fft_3_9;
@@ -313,7 +313,7 @@ static void vDagInit(void) {
   node_Task_fft_4_10.run = vCuNodeWork;
   node_Task_fft_4_10.arg = &ctx_Task_fft_4_10;
   node_Task_fft_4_10.storageSizeBytes = 1920U;
-  node_Task_fft_4_10.indegree = 1U;
+  node_Task_fft_4_10.indegree = 2U;
   node_Task_fft_4_10.mode = DAG_NODE_ASYNC;
   node_Task_fft_4_10.numInputs = 2U;
   node_Task_fft_4_10.inputs = inputs_Task_fft_4_10;
@@ -329,7 +329,7 @@ static void vDagInit(void) {
   node_Task_fft_5_11.run = vCuNodeWork;
   node_Task_fft_5_11.arg = &ctx_Task_fft_5_11;
   node_Task_fft_5_11.storageSizeBytes = 1920U;
-  node_Task_fft_5_11.indegree = 1U;
+  node_Task_fft_5_11.indegree = 2U;
   node_Task_fft_5_11.mode = DAG_NODE_ASYNC;
   node_Task_fft_5_11.numInputs = 2U;
   node_Task_fft_5_11.inputs = inputs_Task_fft_5_11;

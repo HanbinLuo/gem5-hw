@@ -40,6 +40,13 @@ static BaseType_t vCuIsHwIdle(uint32_t id) {
 }
 
 static void dma_memcpy(void* dst, const void* src, uint32_t len) {
+  if (len == 0U) {
+    return;
+  }
+
+  /* DMA 控制器是全局共享资源，必须加锁保护 */
+  UBaseType_t uxSavedStatus = taskENTER_CRITICAL_FROM_ISR();
+
   /* 清 DONE 标志 */
   dma->STATUS = DMA_STATUS_DONE;
 
@@ -52,6 +59,8 @@ static void dma_memcpy(void* dst, const void* src, uint32_t len) {
   while ((dma->STATUS & DMA_STATUS_DONE) == 0) {
     /* busy wait */
   }
+
+  taskEXIT_CRITICAL_FROM_ISR(uxSavedStatus);
 }
 
 static uintptr_t cu_output_src_addr(uint32_t cu_id, uint32_t index) {
@@ -265,10 +274,12 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
     dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
   }
 
+  UBaseType_t uxSavedStatus = taskENTER_CRITICAL_FROM_ISR();
   gCuSlots[cu_id].waiter = NULL;
   gCuSlots[cu_id].dag_node = NULL;
   gCuSlots[cu_id].job_id = 0;
   memset(&gCuSlots[cu_id].job, 0, sizeof(gCuSlots[cu_id].job));
+  taskEXIT_CRITICAL_FROM_ISR(uxSavedStatus);
 
   if (waiter != NULL) {
     vTaskNotifyGiveFromISR(waiter, pxHigherPriorityTaskWoken);

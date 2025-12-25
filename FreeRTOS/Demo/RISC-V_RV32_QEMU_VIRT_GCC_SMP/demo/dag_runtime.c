@@ -24,34 +24,32 @@ static DagRuntimeState_t gDag;
 
 static inline uint32_t dag_atomic_dec(uint32_t* pValue) {
   uint32_t newVal;
-
-  taskENTER_CRITICAL();
+  UBaseType_t uxSaved = taskENTER_CRITICAL_FROM_ISR();
   (*pValue)--;
   newVal = *pValue;
-  taskEXIT_CRITICAL();
-
+  taskEXIT_CRITICAL_FROM_ISR(uxSaved);
   return newVal;
 }
 
 static void vDagTempAlloc(uint32_t sizeBytes) {
-  taskENTER_CRITICAL();
+  UBaseType_t uxSaved = taskENTER_CRITICAL_FROM_ISR();
   gDag.tempBytes += sizeBytes;
   if (gDag.tempBytes > gDag.tempPeakBytes) {
     gDag.tempPeakBytes = gDag.tempBytes;
   }
-  taskEXIT_CRITICAL();
+  taskEXIT_CRITICAL_FROM_ISR(uxSaved);
   LOGF("TempMem alloc %u bytes, current=%u, peak=%u\n", sizeBytes,
        gDag.tempBytes, gDag.tempPeakBytes);
 }
 
 static void vDagTempFree(uint32_t sizeBytes) {
-  taskENTER_CRITICAL();
+  UBaseType_t uxSaved = taskENTER_CRITICAL_FROM_ISR();
   if (gDag.tempBytes >= sizeBytes) {
     gDag.tempBytes -= sizeBytes;
   } else {
     gDag.tempBytes = 0U;
   }
-  taskEXIT_CRITICAL();
+  taskEXIT_CRITICAL_FROM_ISR(uxSaved);
   LOGF("TempMem free %u bytes, current=%u, peak=%u\n", sizeBytes,
        gDag.tempBytes, gDag.tempPeakBytes);
 }
@@ -209,16 +207,16 @@ void vDagNotifyAsyncDoneFromISR(DagNode* node,
 
 uint32_t ulDagGetTempBytes(void) {
   uint32_t value;
-  taskENTER_CRITICAL();
+  UBaseType_t uxSaved = taskENTER_CRITICAL_FROM_ISR();
   value = gDag.tempBytes;
-  taskEXIT_CRITICAL();
+  taskEXIT_CRITICAL_FROM_ISR(uxSaved);
   return value;
 }
 
 uint32_t ulDagGetTempPeakBytes(void) {
   uint32_t value;
-  taskENTER_CRITICAL();
+  UBaseType_t uxSaved = taskENTER_CRITICAL_FROM_ISR();
   value = gDag.tempPeakBytes;
-  taskEXIT_CRITICAL();
+  taskEXIT_CRITICAL_FROM_ISR(uxSaved);
   return value;
 }

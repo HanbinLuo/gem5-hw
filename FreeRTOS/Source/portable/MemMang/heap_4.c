@@ -217,7 +217,7 @@ void * pvPortMalloc( size_t xWantedSize )
         mtCOVERAGE_TEST_MARKER();
     }
 
-    vTaskSuspendAll();
+    taskENTER_CRITICAL();
     {
         /* If this is the first call to malloc then the heap will require
          * initialisation to setup the list of free blocks. */
@@ -325,7 +325,7 @@ void * pvPortMalloc( size_t xWantedSize )
 
         traceMALLOC( pvReturn, xWantedSize );
     }
-    ( void ) xTaskResumeAll();
+    taskEXIT_CRITICAL();
 
     #if ( configUSE_MALLOC_FAILED_HOOK == 1 )
     {
@@ -381,7 +381,7 @@ void vPortFree( void * pv )
                 }
                 #endif
 
-                vTaskSuspendAll();
+                taskENTER_CRITICAL();
                 {
                     /* Add this block to the list of free blocks. */
                     xFreeBytesRemaining += pxLink->xBlockSize;
@@ -389,7 +389,7 @@ void vPortFree( void * pv )
                     prvInsertBlockIntoFreeList( ( ( BlockLink_t * ) pxLink ) );
                     xNumberOfSuccessfulFrees++;
                 }
-                ( void ) xTaskResumeAll();
+                taskEXIT_CRITICAL();
             }
             else
             {
@@ -562,7 +562,7 @@ void vPortGetHeapStats( HeapStats_t * pxHeapStats )
     BlockLink_t * pxBlock;
     size_t xBlocks = 0, xMaxSize = 0, xMinSize = portMAX_DELAY; /* portMAX_DELAY used as a portable way of getting the maximum value. */
 
-    vTaskSuspendAll();
+    taskENTER_CRITICAL();
     {
         pxBlock = heapPROTECT_BLOCK_POINTER( xStart.pxNextFreeBlock );
 
@@ -592,7 +592,7 @@ void vPortGetHeapStats( HeapStats_t * pxHeapStats )
             }
         }
     }
-    ( void ) xTaskResumeAll();
+    taskEXIT_CRITICAL();
 
     pxHeapStats->xSizeOfLargestFreeBlockInBytes = xMaxSize;
     pxHeapStats->xSizeOfSmallestFreeBlockInBytes = xMinSize;
