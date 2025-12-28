@@ -11,10 +11,10 @@ PHDRS
 MEMORY
 {
     /* Bare-metal (-bios none): QEMU sets PC to 0x80000000 */
-    RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 16M
+    RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 512M
 }
 
-STACK_SIZE_PER_HART = 0x4000;
+STACK_SIZE_PER_HART = 0x8000;
 
 SECTIONS
 {

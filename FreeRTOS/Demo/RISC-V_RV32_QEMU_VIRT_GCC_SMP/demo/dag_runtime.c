@@ -116,7 +116,7 @@ static void vDagEnqueueSuccessors(DagNode* node) {
 
     if (newIndegree == 0U) {
       DagNode* ready = succ;
-      xQueueSend(gDag.readyQ, &ready, portMAX_DELAY);
+      configASSERT(xQueueSend(gDag.readyQ, &ready, 0) == pdPASS);
     }
   }
 }
@@ -204,7 +204,8 @@ void vDagNotifyAsyncDoneFromISR(DagNode* node,
                                 BaseType_t* pxHigherPriorityTaskWoken) {
   configASSERT(node != NULL);
   node->async_pending = 0U;
-  xQueueSendFromISR(gDag.asyncDoneQ, &node, pxHigherPriorityTaskWoken);
+  configASSERT(xQueueSendFromISR(gDag.asyncDoneQ, &node,
+                                 pxHigherPriorityTaskWoken) == pdPASS);
 }
 
 uint32_t ulDagGetTempBytes(void) {

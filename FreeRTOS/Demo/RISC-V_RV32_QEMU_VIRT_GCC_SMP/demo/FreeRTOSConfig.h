@@ -14,8 +14,8 @@
 #define configCPU_CLOCK_HZ                      ( configCLINT_CLOCK_HZ )
 #define configTICK_RATE_HZ                      ( 1000UL )
 #define configMAX_PRIORITIES                    7
-#define configMINIMAL_STACK_SIZE                256
-#define configMAX_TASK_NAME_LEN                 16
+#define configMINIMAL_STACK_SIZE                8192
+#define configMAX_TASK_NAME_LEN                 32
 #define configUSE_16_BIT_TICKS                  0
 #define configIDLE_SHOULD_YIELD                 1
 #define configUSE_TASK_NOTIFICATIONS            1
@@ -25,7 +25,7 @@
 #define configUSE_QUEUE_SETS                    0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
 #define configSUPPORT_STATIC_ALLOCATION         0
-#define configTOTAL_HEAP_SIZE                   ( ( size_t ) ( 64U * 1024U ) )
+#define configTOTAL_HEAP_SIZE                   ( ( size_t ) (1U * 1024U * 1024U ) )
 #define configUSE_APPLICATION_TASK_TAG          0
 #define configUSE_CORE_AFFINITY                 1
 #define configNUMBER_OF_CORES                   4

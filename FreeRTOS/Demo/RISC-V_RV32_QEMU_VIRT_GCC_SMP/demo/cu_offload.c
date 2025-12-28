@@ -250,20 +250,17 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
   TaskHandle_t waiter = gCuSlots[cu_id].waiter;
   struct DagNode* dag_node = gCuSlots[cu_id].dag_node;
 
-  if (dag_node != NULL) {
-    LOGF("Node %s handled CU %d ISR on core %d\n", dag_node->name, cu_id,
-         (uint32_t)portGET_CORE_ID());
-  }
+  /* Avoid UART logging in ISR: printf uses a spinlock and can deadlock. */
 
   /* 回收输出：从 CU 侧地址 DMA 到输出 buffer */
-  for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
-    void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
-    uint32_t len = gCuSlots[cu_id].job.outputSizes[i];
-    if (dst == NULL || len == 0U) {
-      continue;
-    }
-    dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
-  }
+  // for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
+  //   void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
+  //   uint32_t len = gCuSlots[cu_id].job.outputSizes[i];
+  //   if (dst == NULL || len == 0U) {
+  //     continue;
+  //   }
+  //   dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
+  // }
 
   gCuSlots[cu_id].waiter = NULL;
   gCuSlots[cu_id].dag_node = NULL;

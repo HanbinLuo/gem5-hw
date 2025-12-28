@@ -5,7 +5,7 @@
     .section .init, "ax", @progbits
     .globl _start
 
-.equ STACK_SIZE_PER_HART, 0x4000
+.equ STACK_SIZE_PER_HART, 0x8000
 
 _start:
     /* Set up global pointer for small data references. */

@@ -10,8 +10,8 @@
 
 struct DagNode;
 
-#define CU_MAX_COUNT 256        /* 现在只用 256 个 CU，将来可以扩展 */
-#define CU_MAX_IO 4           /* 每个 CU 任务最多传 4 路输入/输出描述 */
+#define CU_MAX_COUNT 256      /* 现在只用 256 个 CU，将来可以扩展 */
+#define CU_MAX_IO 40          /* 每个 CU 任务最多传 40 路输入/输出描述 */
 #define CU_ANY_ID 0xFFFFFFFFu /* 让运行时选择空闲 CU */
 
 /* CU 基址：支持按 cu_id 偏移（stride）映射多个 CU，间隔为 0x40 */
@@ -36,12 +36,12 @@ struct DagNode;
 #define CU_CONFIG_OFF 0x10
 #define CU_STATUS_OFF 0x11
 #define CU_BUSY_OFF 0x12
-#define CU_INPUT_ADDR0_OFF 0x1004
+#define CU_INPUT_ADDR0_OFF 0x1000
 #define CU_INPUT_SIZE0_OFF 0x1000
-#define CU_INPUT_STRIDE 0x800
-#define CU_OUTPUT_ADDR0_OFF 0x3004
-#define CU_OUTPUT_SIZE0_OFF 0x3000
-#define CU_OUTPUT_STRIDE 0x800
+#define CU_INPUT_STRIDE 0x1000
+#define CU_OUTPUT_ADDR0_OFF 0x50000
+#define CU_OUTPUT_SIZE0_OFF 0x50000
+#define CU_OUTPUT_STRIDE 0x1000
 
 static inline uintptr_t cu_base(uint32_t id) {
   return (uintptr_t)(CU_BASE0 + id * CU_STRIDE);
