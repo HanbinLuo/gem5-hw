@@ -6,7 +6,6 @@
 
 #include "FreeRTOS.h"
 #include "portmacro.h"
-#include "task.h"
 
 #define UART0_BASE 0x10000000UL
 #define UART_REG_DLL 0x00
@@ -79,10 +78,6 @@ void prvUartPutRaw(char c) {
 /*-----------------------------------------------------------*/
 
 void prvUartWrite(const char* pcData, size_t xLength) {
-  /* 在 SMP 环境下，获取 UART 锁时必须进入临界区，防止与内核调度产生死锁。
-     使用 FromISR 版本以确保在中断上下文中也是安全的，且不会盲目使能中断。 */
-  UBaseType_t uxSavedStatus = taskENTER_CRITICAL_FROM_ISR();
-
   prvUartLockAcquire();
 
   for (size_t i = 0U; i < xLength; i++) {
@@ -94,8 +89,6 @@ void prvUartWrite(const char* pcData, size_t xLength) {
   }
 
   prvUartLockRelease();
-
-  taskEXIT_CRITICAL_FROM_ISR(uxSavedStatus);
 }
 
 /*-----------------------------------------------------------*/
@@ -416,7 +409,7 @@ void vLogPrintfLn(const char* pcFmt, ...) {
   va_list xArgs;
   va_start(xArgs, pcFmt);
 
-  char cBuffer[128];
+  char cBuffer[256];
   size_t xIndex = 0U;
 
   /* 前缀：[core X] */
