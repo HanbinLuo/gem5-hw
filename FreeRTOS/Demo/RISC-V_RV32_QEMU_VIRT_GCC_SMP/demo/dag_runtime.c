@@ -70,8 +70,10 @@ static void vDagTempAlloc(uint32_t sizeBytes) {
     gDag.tempPeakBytes = gDag.tempBytes;
   }
   taskEXIT_CRITICAL();
+  #ifdef DEBUG_LOGF
   LOGF("TempMem alloc %u bytes, current=%u, peak=%u\n", sizeBytes,
        gDag.tempBytes, gDag.tempPeakBytes);
+  #endif
 }
 
 static void vDagTempFree(uint32_t sizeBytes) {
@@ -82,8 +84,10 @@ static void vDagTempFree(uint32_t sizeBytes) {
     gDag.tempBytes = 0U;
   }
   taskEXIT_CRITICAL();
+  #ifdef DEBUG_LOGF
   LOGF("TempMem free %u bytes, current=%u, peak=%u\n", sizeBytes,
        gDag.tempBytes, gDag.tempPeakBytes);
+  #endif
 }
 
 static void vDagProduceOutputs(DagNode* node) {
@@ -167,7 +171,9 @@ static void vDagFinalizeNode(DagNode* node) {
       unsigned long long diff = gDagEndCycles - gDagStartCycles;
       /* Truncate to 32-bit per user request and print as decimal int */
       uint32_t diff32 = (uint32_t)(diff & 0xFFFFFFFFULL);
+      // #ifdef DEBUG_LOGF
       LOGF("DAG finished: cycles=%u\n", diff32);
+      // #endif
     }
     taskEXIT_CRITICAL();
   }
@@ -176,9 +182,9 @@ static void vDagFinalizeNode(DagNode* node) {
 static void vDagWorkerTask(void* pvParam) {
   (void)pvParam;
   DagNode* node;
-
+#ifdef DEBUG_LOGF
   LOGF("Dag worker started on core %d\n", (uint32_t)portGET_CORE_ID());
-
+#endif
   /* 1) 使能机器外部中断 */
   vEnableMachineExternalInterrupts();
 
@@ -202,8 +208,10 @@ static void vDagAsyncCompleteTask(void* pvParam) {
       // vDemoLogString(node->name);
       // vDemoLogDecimal("CU node done on core",
       //                 (uint32_t)portGET_CORE_ID());
+      #ifdef DEBUG_LOGF
       LOGF("Node %s done on core %d\n", node->name,
            (uint32_t)portGET_CORE_ID());
+      #endif
       vDagFinalizeNode(node);
     }
   }

@@ -286,6 +286,8 @@ def generate_c_code(json_file, output_file):
     lines.append("")
     lines.append("void vStartDagDemo(void) {")
     lines.append("  vDagInit(); vCuInit();")
+    lines.append(f"  vDagSetTotalNodes({len(nodes)}U);")
+    
     lines.append("  DagRuntimeConfig cfg = { .workerCount = NUM_WORKERS, .workerPriority = tskIDLE_PRIORITY + 2,")
     lines.append("    .workerStackWords = 512, .asyncPriority = tskIDLE_PRIORITY + 3, .asyncStackWords = 512,")
     lines.append("    .readyQueueLen = DAG_QUEUE_LEN, .asyncDoneQueueLen = DAG_ASYNC_DONE_QUEUE_LEN, .useCoreAffinity = 1 };")
@@ -299,6 +301,7 @@ def generate_c_code(json_file, output_file):
     with open(output_file, 'w') as f:
         f.write('\n'.join(lines))
     print(f"Generated {output_file}")
+    print(f"Total nodes: {len(nodes)}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
