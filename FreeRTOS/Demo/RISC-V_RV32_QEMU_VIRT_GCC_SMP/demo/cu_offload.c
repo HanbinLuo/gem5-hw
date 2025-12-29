@@ -8,7 +8,6 @@
 #include "plic_handler.h"
 #include "uart16550.h"
 
-// �? RISC-V mcycle（裸机运行在 machine/privileged 模式），用于测周期数
 static inline unsigned long long rdcycle64(void) {
   unsigned long long v;
   // 如果目标支持 rdcycle:
@@ -40,12 +39,11 @@ static BaseType_t vCuIsHwIdle(uint32_t id) {
     return pdFALSE;
   }
   uint8_t busy = mmio_read8(cu_base(id) + CU_BUSY_OFF);
-  /* busy register bit0 == 0 ��ʾ���� */
   return (busy & 0x1u) == 0u;
 }
 
 static void dma_memcpy(void* dst, const void* src, uint32_t len) {
-  /* �? DONE 标志 */
+  /*清DONE 标志 */
   dma->STATUS = DMA_STATUS_DONE;
 
   dma->SRC = (uint32_t)src;
@@ -53,7 +51,7 @@ static void dma_memcpy(void* dst, const void* src, uint32_t len) {
   dma->LEN = len;
   dma->CTRL = DMA_CTRL_START;
 
-  /* 简单轮询等�? DMA 完成 */
+  /* 简单轮询等待DMA 完成 */
   while ((dma->STATUS & DMA_STATUS_DONE) == 0) {
     /* busy wait */
   }
@@ -72,7 +70,7 @@ void vCuHwStartJob(uint32_t cu_id, uint32_t job_id, const CuSlot_t* job_info) {
 
   (void)job_id;
 
-  /* 搬移数据�? CU */
+  /* 搬移数据到CU */
   for (uint32_t i = 0; i < numInputs; i++) {
     dma_memcpy((void*)cu_base(cu_id) + CU_INPUT_ADDR0_OFF + i * CU_INPUT_STRIDE,
                (const void*)job_slot->job.inputAddrs[i],
@@ -131,7 +129,6 @@ void vCuInit(void) {
   }
 }
 
-/* ����ʵ���пɼ��� CU ������0 = �����ƣ� */
 uint32_t gCuAvailableCount = 0u;
 
 void vCuSetAvailableCount(uint32_t count) {
@@ -179,10 +176,10 @@ uint32_t vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
   /* 真正启动 CU + DMA */
   vCuHwStartJob(cu_id, job_id, NULL);
 
-  /* 阻塞等待 PLIC 中断唤醒（不 busy-wait�? */
+  /* 阻塞等待 PLIC 中断唤醒（不 busy-wait）*/
   (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-  /* ISR 负责清理 slot，这里做一下防御性检�? */
+  /* ISR 负责清理 slot，这里做一下防御性检查*/
   configASSERT(gCuSlots[cu_id].waiter == NULL);
   configASSERT(gCuSlots[cu_id].dag_node == NULL);
 
@@ -267,7 +264,7 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
 
   /* Avoid UART logging in ISR: printf uses a spinlock and can deadlock. */
 
-  /* 回收输出：从 CU 侧地址 DMA 到输�? buffer */
+  /* 回收输出：从 CU 侧地址 DMA 到输出buffer */
   // for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
   //   void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
   //   uint32_t len = gCuSlots[cu_id].job.outputSizes[i];

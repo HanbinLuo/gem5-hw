@@ -24,6 +24,12 @@ static DagRuntimeState_t gDag;
 /* Worker count override (defined here so it's linked into the demo binary) */
 UBaseType_t gDagWorkerCountOverride = 0u;
 
+void vDagSetWorkerCountOverride(UBaseType_t wc) {
+  taskENTER_CRITICAL();
+  gDagWorkerCountOverride = wc;
+  taskEXIT_CRITICAL();
+}
+
 /* For measuring DAG completion */
 static uint32_t gDagTotalNodes = 0U;
 static uint32_t gDagFinishedNodes = 0U;

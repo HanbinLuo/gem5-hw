@@ -232,7 +232,7 @@ def generate_c_code(json_file, output_file):
         lines.append(f"  node_{sn}.name = \"{n['name']}\";")
         lines.append(f"  node_{sn}.run = vCuNodeWork;")
         lines.append(f"  node_{sn}.arg = &ctx_{sn};")
-        # 设置�?0或者UINT32_MAX都没问题，但是设置和storage_size一样会卡死
+        # 设置为0或者UINT32_MAX都没问题，但是设置和storage_size一样会卡死
         # lines.append(f"  node_{sn}.computeDelayMs = {n['storage_size']}U;")
         lines.append(f"  node_{sn}.computeDelayMs = {100000 * n['storage_size']}U;")
         # lines.append(f"  node_{sn}.storageSizeBytes = {n['storage_size']}U;")

@@ -1,9 +1,9 @@
 /* dag_runtime.h
  *
  * FreeRTOS 上的一个极简 DAG 调度器：
- *  - DAG 节点可分为同�?/异步两类
- *  - 异步节点 run() 返回后释�? worker，实际完成由 ISR 通知
- *  - DAG runtime 统一维护 ready 队列�? async-done 队列
+ *  - DAG 节点可分为同步异步两类
+ *  - 异步节点 run() 返回后释放worker，实际完成由 ISR 通知
+ *  - DAG runtime 统一维护 ready 队列和 async-done 队列
  */
 
 #ifndef DAG_RUNTIME_H
@@ -71,5 +71,13 @@ uint32_t ulDagGetTempBytes(void);
 uint32_t ulDagGetTempPeakBytes(void);
 /* Set total number of DAG nodes (used for completion timing). */
 void vDagSetTotalNodes(uint32_t total);
+
+/* Runtime overrides and test helpers (moved from run_config.h) */
+extern UBaseType_t gDagWorkerCountOverride;
+void vDagSetWorkerCountOverride(UBaseType_t wc);
+
+/* CU availability (defined in cu_offload.c) exposed here for convenience */
+extern uint32_t gCuAvailableCount;
+void vCuSetAvailableCount(uint32_t count);
 
 #endif /* DAG_RUNTIME_H */
