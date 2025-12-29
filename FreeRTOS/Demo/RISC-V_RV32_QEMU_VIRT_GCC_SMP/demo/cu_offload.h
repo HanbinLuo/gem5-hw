@@ -18,7 +18,7 @@ struct DagNode;
 #define CU_BASE0 0x10100000UL
 #define CU_STRIDE 0x100000UL
 
-/* CU 寄存器偏移（地址规划占位，具体映射待硬件/文档确认） */
+/* CU 寄存器偏移（地址规划占位，具体映射待硬件/文档确认�? */
 /* ComputeUnit register map (all offsets are byte addresses)
         0x00..0x03 : CU_ID    (32-bit)
         0x04..0x07 : JOB_ID   (32-bit)
@@ -47,7 +47,7 @@ static inline uintptr_t cu_base(uint32_t id) {
   return (uintptr_t)(CU_BASE0 + id * CU_STRIDE);
 }
 
-// 简单的 MMIO 读写（8-bit）
+// 简单的 MMIO 读写�?8-bit�?
 static inline void mmio_write8(uintptr_t addr, uint8_t v) {
   volatile uint8_t* p = (volatile uint8_t*)addr;
   *p = v;
@@ -58,7 +58,7 @@ static inline uint8_t mmio_read8(uintptr_t addr) {
   return *p;
 }
 
-// 简单的 MMIO 读写（32-bit）
+// 简单的 MMIO 读写�?32-bit�?
 static inline void mmio_write32(uintptr_t addr, uint32_t v) {
   volatile uint32_t* p = (volatile uint32_t*)addr;
   *p = v;
@@ -87,16 +87,19 @@ typedef struct {
 
 void vCuInit(void);
 
-/* DAG 任务同步阻塞 offload ：提交一个 CU 任务并等待 PLIC IRQ 唤醒 */
+/* Limit number of available HW CUs at runtime (for experiments). */
+void vCuSetAvailableCount(uint32_t count);
+
+/* DAG 任务同步阻塞 offload ：提交一�? CU 任务并等�? PLIC IRQ 唤醒 */
 uint32_t vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id);
 
-/* DAG 异步 offload ：提交 CU 任务，完成由 PLIC ISR 通知 DAG runtime */
+/* DAG 异步 offload ：提�? CU 任务，完成由 PLIC ISR 通知 DAG runtime */
 uint32_t vCuSubmitDagJob(uint32_t cu_id, uint32_t job_id, struct DagNode* node);
 
-/* 中断上下文：在 PLIC IRQ handler 里调用 */
+/* 中断上下文：�? PLIC IRQ handler 里调�? */
 void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken);
 
-/* 写 CU / DMA 寄存器并启动运算 */
+/* �? CU / DMA 寄存器并启动运算 */
 void vCuHwStartJob(uint32_t cu_id, uint32_t job_id, const CuSlot_t* job_info);
 
 #endif

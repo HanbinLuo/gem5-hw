@@ -1,9 +1,9 @@
 /* dag_runtime.h
  *
  * FreeRTOS 上的一个极简 DAG 调度器：
- *  - DAG 节点可分为同步/异步两类
- *  - 异步节点 run() 返回后释放 worker，实际完成由 ISR 通知
- *  - DAG runtime 统一维护 ready 队列和 async-done 队列
+ *  - DAG 节点可分为同�?/异步两类
+ *  - 异步节点 run() 返回后释�? worker，实际完成由 ISR 通知
+ *  - DAG runtime 统一维护 ready 队列�? async-done 队列
  */
 
 #ifndef DAG_RUNTIME_H
@@ -69,5 +69,7 @@ void vDagNotifyAsyncDoneFromISR(DagNode *node,
 void vDagPrepareAsyncOutputs(DagNode *node);
 uint32_t ulDagGetTempBytes(void);
 uint32_t ulDagGetTempPeakBytes(void);
+/* Set total number of DAG nodes (used for completion timing). */
+void vDagSetTotalNodes(uint32_t total);
 
 #endif /* DAG_RUNTIME_H */

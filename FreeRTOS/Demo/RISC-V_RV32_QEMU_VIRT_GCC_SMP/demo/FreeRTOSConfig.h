@@ -101,7 +101,7 @@ void vAssertCalled( const char * pcFile, int lLine );
 
 /* Additional required kernel options. */
 #ifndef configUSE_PASSIVE_IDLE_HOOK
-    /* SMP 下建议启用被动 Idle Hook，以便在 Idle 期间执行平台维护工作（如软 tick）。 */
+    /* SMP 下建议启用被�? Idle Hook，以便在 Idle 期间执行平台维护工作（如�? tick）�? */
     #define configUSE_PASSIVE_IDLE_HOOK         1
 #endif
 #ifndef configUSE_TICK_HOOK

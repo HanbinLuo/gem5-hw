@@ -152,8 +152,8 @@ def generate_c_code(json_file, output_file):
     lines.append('#include "uart16550.h"')
     lines.append("")
     lines.append("#define NUM_WORKERS (configNUMBER_OF_CORES)")
-    lines.append("#define DAG_QUEUE_LEN 16")
-    lines.append("#define DAG_ASYNC_DONE_QUEUE_LEN 16")
+    lines.append("#define DAG_QUEUE_LEN 1000")
+    lines.append("#define DAG_ASYNC_DONE_QUEUE_LEN 1000")
     lines.append("")
     lines.append("typedef struct { uint32_t cu_id; uint32_t job_id; DagNode* node; } CuNodeCtx_t;")
     lines.append("")
@@ -232,7 +232,7 @@ def generate_c_code(json_file, output_file):
         lines.append(f"  node_{sn}.name = \"{n['name']}\";")
         lines.append(f"  node_{sn}.run = vCuNodeWork;")
         lines.append(f"  node_{sn}.arg = &ctx_{sn};")
-        # 设置为0或者UINT32_MAX都没问题，但是设置和storage_size一样会卡死
+        # 设置�?0或者UINT32_MAX都没问题，但是设置和storage_size一样会卡死
         # lines.append(f"  node_{sn}.computeDelayMs = {n['storage_size']}U;")
         lines.append(f"  node_{sn}.computeDelayMs = {100000 * n['storage_size']}U;")
         # lines.append(f"  node_{sn}.storageSizeBytes = {n['storage_size']}U;")
@@ -270,21 +270,32 @@ def generate_c_code(json_file, output_file):
     lines.append("}")
     lines.append("")
 
-    # Start function
+    lines.append("static void vDagSubmitInitialNodes(void) {")
+    # Submit roots
+    for n in nodes:
+        if not n['inputs']:
+            lines.append(f"  vDagSubmitReadyNode(&node_{n['safe_name']});")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("static void vDagKickoffTask(void* pvParameters) {")
+    lines.append("  (void)pvParameters;")
+    lines.append("  vDagSubmitInitialNodes();")
+    lines.append("  vTaskDelete(NULL);")
+    lines.append("}")
+    lines.append("")
     lines.append("void vStartDagDemo(void) {")
     lines.append("  vDagInit(); vCuInit();")
     lines.append("  DagRuntimeConfig cfg = { .workerCount = NUM_WORKERS, .workerPriority = tskIDLE_PRIORITY + 2,")
     lines.append("    .workerStackWords = 512, .asyncPriority = tskIDLE_PRIORITY + 3, .asyncStackWords = 512,")
     lines.append("    .readyQueueLen = DAG_QUEUE_LEN, .asyncDoneQueueLen = DAG_ASYNC_DONE_QUEUE_LEN, .useCoreAffinity = 1 };")
     lines.append("  vDagRuntimeStart(&cfg);")
-    
-    # Submit roots
-    for n in nodes:
-        if not n['inputs']:
-            lines.append(f"  vDagSubmitReadyNode(&node_{n['safe_name']});")
-    
+    lines.append("  configASSERT(xTaskCreate(vDagKickoffTask, \"DagKick\", 512, NULL,")
+    lines.append("                           tskIDLE_PRIORITY + 1, NULL) == pdPASS);")
     lines.append("}")
 
+    lines.append("")
+    
     with open(output_file, 'w') as f:
         f.write('\n'.join(lines))
     print(f"Generated {output_file}")
