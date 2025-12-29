@@ -253,14 +253,14 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
   /* Avoid UART logging in ISR: printf uses a spinlock and can deadlock. */
 
   /* 回收输出：从 CU 侧地址 DMA 到输出 buffer */
-  // for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
-  //   void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
-  //   uint32_t len = gCuSlots[cu_id].job.outputSizes[i];
-  //   if (dst == NULL || len == 0U) {
-  //     continue;
-  //   }
-  //   dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
-  // }
+  for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
+    void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
+    uint32_t len = gCuSlots[cu_id].job.outputSizes[i];
+    if (dst == NULL || len == 0U) {
+      continue;
+    }
+    dma_memcpy(dst, (void*)cu_output_src_addr(cu_id, i), len);
+  }
 
   gCuSlots[cu_id].waiter = NULL;
   gCuSlots[cu_id].dag_node = NULL;
