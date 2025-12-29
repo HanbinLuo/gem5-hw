@@ -16,7 +16,7 @@
 #include "task.h"
 
 //是否打印日志
-// #define DEBUG_LOGF
+#define DEBUG_LOGF
 
 typedef enum {
     DAG_NODE_SYNC = 0,
