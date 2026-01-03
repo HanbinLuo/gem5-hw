@@ -49,6 +49,7 @@ void vDagSetTotalNodes(uint32_t total) {
   gDagStartCycles = rdcycle64_local();
   gDagEndCycles = 0ULL;
   taskEXIT_CRITICAL();
+  /* 移到临界区外避免死锁 */
   LOGF("DAG total nodes set=%u\n", total);
 }
 
@@ -64,29 +65,39 @@ static inline uint32_t dag_atomic_dec(uint32_t* pValue) {
 }
 
 static void vDagTempAlloc(uint32_t sizeBytes) {
+  uint32_t currentBytes, peakBytes;
+  
   taskENTER_CRITICAL();
   gDag.tempBytes += sizeBytes;
   if (gDag.tempBytes > gDag.tempPeakBytes) {
     gDag.tempPeakBytes = gDag.tempBytes;
   }
+  currentBytes = gDag.tempBytes;
+  peakBytes = gDag.tempPeakBytes;
   taskEXIT_CRITICAL();
+  
   #ifdef DEBUG_LOGF
   LOGF("TempMem alloc %u bytes, current=%u, peak=%u\n", sizeBytes,
-       gDag.tempBytes, gDag.tempPeakBytes);
+       currentBytes, peakBytes);
   #endif
 }
 
 static void vDagTempFree(uint32_t sizeBytes) {
+  uint32_t currentBytes, peakBytes;
+  
   taskENTER_CRITICAL();
   if (gDag.tempBytes >= sizeBytes) {
     gDag.tempBytes -= sizeBytes;
   } else {
     gDag.tempBytes = 0U;
   }
+  currentBytes = gDag.tempBytes;
+  peakBytes = gDag.tempPeakBytes;
   taskEXIT_CRITICAL();
+  
   #ifdef DEBUG_LOGF
   LOGF("TempMem free %u bytes, current=%u, peak=%u\n", sizeBytes,
-       gDag.tempBytes, gDag.tempPeakBytes);
+       currentBytes, peakBytes);
   #endif
 }
 
@@ -163,19 +174,23 @@ static void vDagFinalizeNode(DagNode* node) {
   /* Track completion for timing */
   if (gDagTotalNodes != 0U) {
     uint32_t finished;
+    uint32_t diff32 = 0;
+    uint8_t isFinished = 0;
+    
     taskENTER_CRITICAL();
     gDagFinishedNodes++;
     finished = gDagFinishedNodes;
     if (finished == gDagTotalNodes) {
       gDagEndCycles = rdcycle64_local();
       unsigned long long diff = gDagEndCycles - gDagStartCycles;
-      /* Truncate to 32-bit per user request and print as decimal int */
-      uint32_t diff32 = (uint32_t)(diff & 0xFFFFFFFFULL);
-      // #ifdef DEBUG_LOGF
-      LOGF("DAG finished: cycles=%u\n", diff32);
-      // #endif
+      diff32 = (uint32_t)(diff & 0xFFFFFFFFULL);
+      isFinished = 1;
     }
     taskEXIT_CRITICAL();
+    
+    if (isFinished) {
+      LOGF("DAG finished: cycles=%u\n", diff32);
+    }
   }
 }
 
