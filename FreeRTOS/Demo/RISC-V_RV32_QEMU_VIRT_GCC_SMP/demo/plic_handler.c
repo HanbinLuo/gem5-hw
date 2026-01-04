@@ -6,19 +6,8 @@
 #include "cu_offload.h"
 #include "task.h"
 
-/* DAG Debug 寄存器定义 */
-#define DAG_DEBUG_BASE    0x20100000u
-#define DAG_DEBUG_CU_ID   (DAG_DEBUG_BASE + 0x00u)  /* uint32_t cu_id_reg */
-#define DAG_DEBUG_JOB_ID  (DAG_DEBUG_BASE + 0x04u)  /* uint32_t job_id_reg */
-#define DAG_DEBUG_CONFIG  (DAG_DEBUG_BASE + 0x08u)  /* uint8_t config */
-
-static inline void dag_debug_write32(uint32_t addr, uint32_t val) {
-  *(volatile uint32_t*)addr = val;
-}
-
-static inline void dag_debug_write8(uint32_t addr, uint8_t val) {
-  *(volatile uint8_t*)addr = val;
-}
+/* DAG debug helpers */
+#include "dag_debug.h"
 
 static inline void plic_mmio_write32(uint32_t addr, uint32_t val) {
   *(volatile uint32_t*)addr = val;
@@ -101,16 +90,16 @@ BaseType_t xPortHandleExternalInterrupt(uint32_t ulMcause, uint32_t ulMepc) {
     /* 将 PLIC claim 映射为 cu_id（假定 CU IRQ 号连续分配） */
     uint32_t cu_id = claim - PLIC_IRQ_CU0;
     
-    /* DAG Debug: 写入cu_id和job_id，config=1表示开始 */
+    /* DAG Debug: 写入cu_id和job_id，config=7表示开始 */
     dag_debug_write32(DAG_DEBUG_CU_ID, cu_id);
     dag_debug_write32(DAG_DEBUG_JOB_ID, 0);  /* job_id暂用cu_id，实际可从gCuSlots获取 */
-    dag_debug_write8(DAG_DEBUG_CONFIG, 1u);  /* 1 = 函数开始 */
+    dag_debug_write8(DAG_DEBUG_CONFIG, 7u);  /* 7 = PLIC Claim/ISR start */
     
     /* 调用 CU/DAG 桥接层处理该 CU 的完成事件 */
     vCuHandleIsr(cu_id, &xHigherPriorityTaskWoken);
     
-    /* DAG Debug: config=2表示结束 */
-    dag_debug_write8(DAG_DEBUG_CONFIG, 2u);  /* 2 = 函数结束 */
+    /* DAG Debug: config=10表示结束 */
+    dag_debug_write8(DAG_DEBUG_CONFIG, 10u);  /* 10 = ISR end */
   }
   return xHigherPriorityTaskWoken;
 }

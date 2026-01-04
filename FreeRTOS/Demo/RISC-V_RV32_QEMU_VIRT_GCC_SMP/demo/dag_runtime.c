@@ -7,6 +7,7 @@
 #include "plic_handler.h"
 #include "portmacro.h"
 #include "uart16550.h"
+#include "dag_debug.h"
 
 #define DAG_MAX_WORKERS configNUMBER_OF_CORES
 
@@ -120,6 +121,7 @@ static void vDagProduceOutputs(DagNode* node) {
 }
 
 void vDagPrepareAsyncOutputs(DagNode* node) {
+  dag_debug_write8(DAG_DEBUG_CONFIG, 2u); /* 2: prepare async outputs */
   for (uint32_t i = 0; i < node->numOutputs; i++) {
     DagData* data = node->outputs[i];
     if (data == NULL) {
@@ -167,6 +169,7 @@ static void vDagEnqueueSuccessors(DagNode* node) {
 }
 
 static void vDagFinalizeNode(DagNode* node) {
+  dag_debug_write8(DAG_DEBUG_CONFIG, 12u); /* 12: finalize node */
   vDagProduceOutputs(node);
   vDagReleaseInputs(node);
   vDagEnqueueSuccessors(node);
@@ -205,7 +208,9 @@ static void vDagWorkerTask(void* pvParam) {
 
   for (;;) {
     if (xQueueReceive(gDag.readyQ, &node, portMAX_DELAY) == pdTRUE) {
+      dag_debug_write8(DAG_DEBUG_CONFIG, 1u); /* 1: node run start */
       node->run(node->arg);
+      dag_debug_write8(DAG_DEBUG_CONFIG, 13u); /* 13: node run end */
 
       if (node->mode == DAG_NODE_SYNC) {
         vDagFinalizeNode(node);
@@ -227,6 +232,7 @@ static void vDagAsyncCompleteTask(void* pvParam) {
       LOGF("Node %s done on core %d\n", node->name,
            (uint32_t)portGET_CORE_ID());
       #endif
+      dag_debug_write8(DAG_DEBUG_CONFIG, 11u); /* 11: async completion dequeued */
       vDagFinalizeNode(node);
     }
   }
@@ -266,6 +272,7 @@ void vDagRuntimeStart(const DagRuntimeConfig* cfg) {
 
 void vDagSubmitReadyNode(DagNode* node) {
   configASSERT(node != NULL);
+  dag_debug_write8(DAG_DEBUG_CONFIG, 0u); /* 0: node queued */
   xQueueSend(gDag.readyQ, &node, portMAX_DELAY);
 }
 

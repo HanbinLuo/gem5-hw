@@ -7,6 +7,7 @@
 #include "dag_runtime.h"
 #include "plic_handler.h"
 #include "uart16550.h"
+#include "dag_debug.h"
 
 static inline unsigned long long rdcycle64(void) {
   unsigned long long v;
@@ -63,6 +64,9 @@ static uintptr_t cu_output_src_addr(uint32_t cu_id, uint32_t index) {
 }
 
 void vCuHwStartJob(uint32_t cu_id, uint32_t job_id, const CuSlot_t* job_info) {
+  dag_debug_write32(DAG_DEBUG_CU_ID, cu_id);
+  dag_debug_write32(DAG_DEBUG_JOB_ID, job_id);
+  dag_debug_write8(DAG_DEBUG_CONFIG, 4u); /* 4: vCuHwStartJob start */
   const CuSlot_t* job_slot = job_info;
   const uint32_t numInputs = (job_slot != NULL) ? job_slot->job.numInputs : 0U;
   const uint32_t numOutputs =
@@ -71,6 +75,7 @@ void vCuHwStartJob(uint32_t cu_id, uint32_t job_id, const CuSlot_t* job_info) {
   (void)job_id;
 
   /* 搬移数据到CU */
+  dag_debug_write8(DAG_DEBUG_CONFIG, 5u); /* 5: input DMA phase */
   for (uint32_t i = 0; i < numInputs; i++) {
     dma_memcpy((void*)cu_base(cu_id) + CU_INPUT_ADDR0_OFF + i * CU_INPUT_STRIDE,
                (const void*)job_slot->job.inputAddrs[i],
@@ -94,6 +99,8 @@ void vCuHwStartJob(uint32_t cu_id, uint32_t job_id, const CuSlot_t* job_info) {
   }
 
   mmio_write8(cu_base(cu_id) + CU_CONFIG_OFF, 1U);
+
+  dag_debug_write8(DAG_DEBUG_CONFIG, 6u); /* 6: CU compute started */
 
   //   // 轮询 status bit0 == 1
   //   while ((mmio_read8(CU_STATUS) & 0x1) == 0) {
@@ -169,6 +176,9 @@ uint32_t vCuSubmitJobAndWait(uint32_t cu_id, uint32_t job_id) {
   }
 
   /* 使能对应CU IRQ */
+  dag_debug_write32(DAG_DEBUG_CU_ID, cu_id);
+  dag_debug_write32(DAG_DEBUG_JOB_ID, job_id);
+  dag_debug_write8(DAG_DEBUG_CONFIG, 3u); /* 3: CU job submit */
   for (int i = 0; i < configNUMBER_OF_CORES; ++i) {
     vPlicInit(i, PLIC_IRQ_CU0 + cu_id);
   }
@@ -265,6 +275,7 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
   /* Avoid UART logging in ISR: printf uses a spinlock and can deadlock. */
 
   /* 回收输出：从 CU 侧地址 DMA 到输出 buffer */
+  dag_debug_write8(DAG_DEBUG_CONFIG, 8u); /* 8: ISR DMA output copy start */
   for (uint32_t i = 0; i < gCuSlots[cu_id].job.numOutputs; i++) {
     void* dst = (void*)gCuSlots[cu_id].job.outputAddrs[i];
     uint32_t len = gCuSlots[cu_id].job.outputSizes[i];
@@ -286,4 +297,6 @@ void vCuHandleIsr(uint32_t cu_id, BaseType_t* pxHigherPriorityTaskWoken) {
   if (dag_node != NULL) {
     vDagNotifyAsyncDoneFromISR(dag_node, pxHigherPriorityTaskWoken);
   }
+
+  dag_debug_write8(DAG_DEBUG_CONFIG, 9u); /* 9: ISR DMA output copy end */
 }
