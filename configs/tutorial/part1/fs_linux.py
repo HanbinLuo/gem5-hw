@@ -231,7 +231,7 @@ system.platform.simple_dma.dma = system.membus.cpu_side_ports
 # ---------------------------- Compute Unit --------------------------- #
 num_compute_units = 256
 cu_base_addr = 0x10100000
-#CU分配1MB
+# CU分配1MB
 cu_size = 0x100000
 system.platform.compute_units = [
     ComputeUnit(
@@ -240,8 +240,18 @@ system.platform.compute_units = [
         pio_latency="1ns",
         cu_id=i,
         interrupt_id=0xB + i,
-    ) for i in range(num_compute_units)
+    )
+    for i in range(num_compute_units)
 ]
+
+# ---------------------------- DAG Debug --------------------------- #
+# 调试打印设备，地址选在 compute_units 之后
+# CU 占用: 0x10100000 + 256 * 0x100000 = 0x20100000
+system.platform.dag_debug = DagDebug(
+    pio_addr=0x20100000,
+    pio_latency="1ns",
+    clock_period=500,  # 2GHz 时钟对应 500 ticks/cycle
+)
 
 # VirtIOMMIO
 if args.disk_image:

@@ -215,6 +215,9 @@ class HiFive(HiFiveBase):
         # 自动添加 compute_units 列表中的所有设备
         if hasattr(self, "compute_units"):
             devices.extend(self.compute_units)
+        # 添加 dag_debug 设备
+        if hasattr(self, "dag_debug"):
+            devices.append(self.dag_debug)
         return devices
 
     def attachPlic(self):
