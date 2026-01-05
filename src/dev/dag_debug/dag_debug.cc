@@ -28,14 +28,14 @@ DagDebug::printDebugInfo()
     uint64_t cycles = (clockPeriod > 0) ? (currentTick / clockPeriod) : 0;
 
     DPRINTF(DagDebug,
-            "DAG_DEBUG: CU_ID=%u, JOB_ID=%u, config=0x%02x, "
+            "DAG_DEBUG: CU_ID=%u, JOB_ID=%u, config=%u, "
             "tick=%llu, cycles=%llu\n",
             cu_id_reg, job_id_reg, config, currentTick, cycles);
 
     // 使用 std::cout 直接打印，与 ComputeUnit 格式一致
     std::cout << "DagDebug: Debug Print\n";
     std::cout << "  CU_ID=" << cu_id_reg << " JOB_ID=" << job_id_reg
-              << " CONFIG=0x" << std::hex << int(config) << std::dec
+              << " CONFIG=" << int(config)
               << " TICK=" << currentTick << " (" << cycles << " cycles)\n";
 }
 

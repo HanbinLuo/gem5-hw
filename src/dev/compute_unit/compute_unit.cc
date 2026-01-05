@@ -11,6 +11,7 @@
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 #include "sim/system.hh"
+#include "sim/cur_tick.hh"
 
 namespace gem5 {
 
@@ -238,7 +239,14 @@ ComputeUnit::write(PacketPtr pkt)
             std::cout << "  CU_ID=" << cu_id_reg << " JOB_ID=" << job_id_reg
                       << " SIZE=" << compute_size_reg << " CONFIG=0x" << std::hex << int(config) << std::dec
                       << " ADDR=0x" << std::hex << pioAddr << std::dec
-                      << " DELAY=" << compute_delay_reg << " ticks (" << (compute_delay_reg / 500) << " cycles)\n";
+                      << " DELAY=" << compute_delay_reg << " ticks (" << (compute_delay_reg / 500) << " cycles)";
+
+            // Include current simulation tick and equivalent clock cycles
+            {
+                Tick currentTick = curTick();
+                uint64_t cycles = currentTick / 500;
+                std::cout << " TICK=" << currentTick << " (" << cycles << " cycles)\n";
+            }
 
             schedule(&computeEvent, when);
         } else if (off == 0x11) {
@@ -280,7 +288,14 @@ ComputeUnit::completeOperation()
     std::cout << "  CU_ID=" << cu_id_reg << " JOB_ID=" << job_id_reg
               << " SIZE=" << compute_size_reg << " CONFIG=0x" << std::hex << int(config) << std::dec
               << " ADDR=0x" << std::hex << pioAddr << std::dec
-              << " DELAY=" << compute_delay_reg << " ticks (" << (compute_delay_reg / 500) << " cycles)\n";
+              << " DELAY=" << compute_delay_reg << " ticks (" << (compute_delay_reg / 500) << " cycles)";
+
+    // Include current simulation tick and equivalent clock cycles
+    {
+        Tick currentTick = curTick();
+        uint64_t cycles = currentTick / 500;
+        std::cout << " TICK=" << currentTick << " (" << cycles << " cycles)\n";
+    }
     // std::cout << "Address: 0x" << std::hex << pioAddr << std::dec
     //           << ", Range: " << pioSize
     //           << ", pioDelay: " << pioDelay
