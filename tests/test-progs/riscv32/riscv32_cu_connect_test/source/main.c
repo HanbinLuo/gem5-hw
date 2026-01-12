@@ -64,7 +64,7 @@ int main( void )
     // 1. Initialize data in CU0 Input Region
     uintptr_t cu0_input = CU0_BASE + CU_INPUT_OFFSET;
     uintptr_t cu1_input = CU1_BASE + CU_INPUT_OFFSET;
-    
+
     printf("Write pattern to CU0 Input at 0x%08x\n", cu0_input);
     mmio_write8(cu0_input + 0, 0xAA);
     mmio_write8(cu0_input + 1, 0xBB);
@@ -93,7 +93,7 @@ int main( void )
     printf("Triggering DMA...\n");
     unsigned long long t0 = rdcycle64();
     mmio_write8(CU0_BASE + CU_DMA_TRIGGER_OFFSET, 1);
-    
+
     // Simple polling/delay - wait for completion
     // Since we don't have a dedicated DMA status bit yet, we assume it completes quickly in simulation
     // or we poll the destination for the expected value

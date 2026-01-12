@@ -90,11 +90,11 @@ class ComputeUnit : public PlicIntDevice
     uint32_t dma_size{0};
 
     RequestorID requestorId;
-    
+
     enum DmaState { DMA_IDLE, DMA_READING, DMA_WRITING };
     DmaState dmaState{DMA_IDLE};
     std::vector<uint8_t> dmaBuffer;
-    
+
     void startDma();
 };
 

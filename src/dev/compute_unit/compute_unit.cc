@@ -372,7 +372,7 @@ ComputeUnit::startDma()
          dmaState = DMA_READING;
          dmaBuffer.resize(dma_size);
     }
-    
+
     // Attempt send based on state
     PacketPtr pkt = nullptr;
     if (dmaState == DMA_READING) {
@@ -400,11 +400,11 @@ ComputeUnit::DmaPort::recvTimingResp(PacketPtr pkt)
         DPRINTF(ComputeUnit, "DMA Read done\n");
         // Copy data
         std::memcpy(owner->dmaBuffer.data(), pkt->getPtr<uint8_t>(), pkt->getSize());
-        
+
         // Transition to Write
         owner->dmaState = DMA_WRITING;
         delete pkt;
-        
+
         // Schedule next step
         owner->startDma();
     } else if (pkt->isWrite()) {
