@@ -246,7 +246,8 @@ system.platform.compute_units = [
 
 # Connect DMA ports of all ComputeUnits to the membus
 for cu in system.platform.compute_units:
-    cu.dma_port = system.membus.cpu_side_ports
+    # cu.dma_port = system.membus.cpu_side_ports
+    cu.dma_port = system.iobus.cpu_side_ports
 
 # ---------------------------- DAG Debug --------------------------- #
 # 调试打印设备，地址选在 compute_units 之后
