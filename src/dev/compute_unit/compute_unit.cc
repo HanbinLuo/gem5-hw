@@ -17,7 +17,8 @@ namespace gem5 {
 
 ComputeUnit::ComputeUnit(const Params &p)
         : PlicIntDevice(p), input_region(region_size, 0), output_region(region_size, 0),
-            computeEvent(*this)
+            computeEvent(*this), dmaPort(p.name + ".dma_port", this),
+            requestorId(p.system->getRequestorId(this))
 {
     // no per-element operand/result arrays anymore
     // initialize 32-bit registers from params where appropriate
@@ -86,6 +87,15 @@ ComputeUnit::read(PacketPtr pkt)
                 val = status & 0x1;
             } else if (off == 0x12) {
                 val = busy & 0x1;
+            } else if (off >= 0x14 && off <= 0x17) {
+                unsigned byte = off - 0x14;
+                val = (dma_src_addr >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x18 && off <= 0x1B) {
+                unsigned byte = off - 0x18;
+                val = (dma_dst_addr >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x1C && off <= 0x1F) {
+                unsigned byte = off - 0x1C;
+                val = (dma_size >> (8 * byte)) & 0xFF;
             }
             buf[i] = val;
         }
@@ -124,6 +134,15 @@ ComputeUnit::read(PacketPtr pkt)
             val = status & 0x1;
         } else if (offset == 0x12) {
             val = busy & 0x1;
+        } else if (offset >= 0x14 && offset <= 0x17) {
+            unsigned byte = offset - 0x14;
+            val = (dma_src_addr >> (8 * byte)) & 0xFF;
+        } else if (offset >= 0x18 && offset <= 0x1B) {
+            unsigned byte = offset - 0x18;
+            val = (dma_dst_addr >> (8 * byte)) & 0xFF;
+        } else if (offset >= 0x1C && offset <= 0x1F) {
+            unsigned byte = offset - 0x1C;
+            val = (dma_size >> (8 * byte)) & 0xFF;
         }
         pkt->setLE<uint8_t>(val);
     } else {
@@ -157,6 +176,15 @@ ComputeUnit::read(PacketPtr pkt)
                 val = status & 0x1;
             } else if (off == 0x12) {
                 val = busy & 0x1;
+            } else if (off >= 0x14 && off <= 0x17) {
+                unsigned byte = off - 0x14;
+                val = (dma_src_addr >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x18 && off <= 0x1B) {
+                unsigned byte = off - 0x18;
+                val = (dma_dst_addr >> (8 * byte)) & 0xFF;
+            } else if (off >= 0x1C && off <= 0x1F) {
+                unsigned byte = off - 0x1C;
+                val = (dma_size >> (8 * byte)) & 0xFF;
             }
             buf[i] = val;
         }
@@ -261,6 +289,23 @@ ComputeUnit::write(PacketPtr pkt)
         } else if (off == 0x12) {
             // Writes to busy can be used to clear or set; here accept write to clear
             busy = v & 0x1;
+        } else if (off >= 0x14 && off <= 0x17) {
+            unsigned byte = off - 0x14;
+            uint32_t mask = uint32_t(0xFF) << (8 * byte);
+            dma_src_addr = (dma_src_addr & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off >= 0x18 && off <= 0x1B) {
+            unsigned byte = off - 0x18;
+            uint32_t mask = uint32_t(0xFF) << (8 * byte);
+            dma_dst_addr = (dma_dst_addr & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off >= 0x1C && off <= 0x1F) {
+            unsigned byte = off - 0x1C;
+            uint32_t mask = uint32_t(0xFF) << (8 * byte);
+            dma_size = (dma_size & ~mask) | (uint32_t(v) << (8 * byte));
+        } else if (off == 0x20) {
+            if (v & 0x1) {
+                // Trigger DMA
+                startDma();
+            }
         }
     }
 
@@ -310,5 +355,70 @@ ComputeUnit::completeOperation()
     }
 }
 
+Port &
+ComputeUnit::getPort(const std::string &if_name, PortID idx)
+{
+    if (if_name == "dma_port")
+        return dmaPort;
+    return PlicIntDevice::getPort(if_name, idx);
+}
+
+void
+ComputeUnit::startDma()
+{
+    // Initial Trigger from Idle
+    if (dmaState == DMA_IDLE) {
+         if (dma_size == 0) return;
+         dmaState = DMA_READING;
+         dmaBuffer.resize(dma_size);
+    }
+    
+    // Attempt send based on state
+    PacketPtr pkt = nullptr;
+    if (dmaState == DMA_READING) {
+        RequestPtr req = std::make_shared<Request>(dma_src_addr, dma_size, 0, requestorId);
+        pkt = new Packet(req, MemCmd::ReadReq);
+        pkt->dataDynamic(new uint8_t[dma_size]);
+    } else if (dmaState == DMA_WRITING) {
+        RequestPtr req = std::make_shared<Request>(dma_dst_addr, dma_size, 0, requestorId);
+        pkt = new Packet(req, MemCmd::WriteReq);
+        pkt->dataStatic(dmaBuffer.data());
+    } else {
+        return;
+    }
+
+    if (!dmaPort.sendTimingReq(pkt)) {
+        // Failed, delete packet and wait for retry
+        delete pkt;
+    }
+}
+
+bool
+ComputeUnit::DmaPort::recvTimingResp(PacketPtr pkt)
+{
+    if (pkt->isRead()) {
+        DPRINTF(ComputeUnit, "DMA Read done\n");
+        // Copy data
+        std::memcpy(owner->dmaBuffer.data(), pkt->getPtr<uint8_t>(), pkt->getSize());
+        
+        // Transition to Write
+        owner->dmaState = DMA_WRITING;
+        delete pkt;
+        
+        // Schedule next step
+        owner->startDma();
+    } else if (pkt->isWrite()) {
+        DPRINTF(ComputeUnit, "DMA Write done\n");
+        owner->dmaState = DMA_IDLE;
+        delete pkt;
+    }
+    return true;
+}
+
+void
+ComputeUnit::DmaPort::recvReqRetry()
+{
+    owner->startDma();
+}
 
 } // namespace gem5

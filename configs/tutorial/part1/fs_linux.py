@@ -244,6 +244,10 @@ system.platform.compute_units = [
     for i in range(num_compute_units)
 ]
 
+# Connect DMA ports of all ComputeUnits to the membus
+for cu in system.platform.compute_units:
+    cu.dma_port = system.membus.cpu_side_ports
+
 # ---------------------------- DAG Debug --------------------------- #
 # 调试打印设备，地址选在 compute_units 之后
 # CU 占用: 0x10100000 + 256 * 0x100000 = 0x20100000

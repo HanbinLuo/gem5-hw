@@ -25,3 +25,5 @@ class ComputeUnit(PlicIntDevice):
     # Compute unit identifier (configurable from top-level Python)
     cu_id = Param.UInt32(0, "Compute Unit ID")
     # interrupt_id is provided via PlicIntDevice/Params (ensure top-level config sets this)
+
+    dma_port = RequestPort("DMA port for interconnect access")

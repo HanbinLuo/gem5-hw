@@ -5,6 +5,7 @@
 
 #include "dev/io_device.hh"
 #include "dev/riscv/plic_device.hh"
+#include "mem/port.hh"
 #include "params/ComputeUnit.hh"
 #include "sim/eventq.hh"
 
@@ -23,6 +24,9 @@ class ComputeUnit : public PlicIntDevice
     // PIO-style access: devices implement read/write
     Tick read(PacketPtr pkt) override;
     Tick write(PacketPtr pkt) override;
+
+    Port &getPort(const std::string &if_name,
+                  PortID idx=InvalidPortID) override;
 
     void completeOperation();
 
@@ -61,6 +65,37 @@ class ComputeUnit : public PlicIntDevice
 
     // Event to model compute delay
     MemberEventWrapper<&ComputeUnit::completeOperation> computeEvent;
+
+    class DmaPort : public RequestPort
+    {
+      private:
+        ComputeUnit *owner;
+      public:
+        DmaPort(const std::string& name, ComputeUnit *owner) :
+            RequestPort(name), owner(owner)
+        {}
+        bool recvTimingResp(PacketPtr pkt) override;
+        void recvReqRetry() override;
+    };
+
+    DmaPort dmaPort;
+
+    // DMA registers
+    // 0x14: src
+    // 0x18: dst
+    // 0x1C: size
+    // 0x20: trigger (bit 0 = start)
+    uint32_t dma_src_addr{0};
+    uint32_t dma_dst_addr{0};
+    uint32_t dma_size{0};
+
+    RequestorID requestorId;
+    
+    enum DmaState { DMA_IDLE, DMA_READING, DMA_WRITING };
+    DmaState dmaState{DMA_IDLE};
+    std::vector<uint8_t> dmaBuffer;
+    
+    void startDma();
 };
 
 } // namespace gem5
